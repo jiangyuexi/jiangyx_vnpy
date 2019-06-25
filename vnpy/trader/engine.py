@@ -36,18 +36,24 @@ from .utility import get_folder_path
 class MainEngine:
     """
     Acts as the core of VN Trader.
+    做为VN Trader的内核
     """
 
     def __init__(self, event_engine: EventEngine = None):
         """"""
         if event_engine:
+            # 传入 EventEngine， 如果不为None，则赋值
             self.event_engine = event_engine
         else:
+            # 如果为None，创建一个EventEngine
             self.event_engine = EventEngine()
+        # 开始事件引擎，并产生定时器事件
         self.event_engine.start()
-
+        # 保存交易通道
         self.gateways = {}
+        # 保存注册的 引擎
         self.engines = {}
+        # 保存apps， app里
         self.apps = {}
         self.exchanges = []
 
@@ -78,6 +84,7 @@ class MainEngine:
     def add_app(self, app_class: BaseApp):
         """
         Add app.
+        把 app 保存在 self.apps和 self.engines
         """
         app = app_class()
         self.apps[app.app_name] = app
@@ -89,8 +96,10 @@ class MainEngine:
         """
         Init all engines.
         """
+        # 日志引擎
         self.add_engine(LogEngine)
         self.add_engine(OmsEngine)
+        # 邮件引擎
         self.add_engine(EmailEngine)
 
     def write_log(self, msg: str, source: str = ""):
@@ -320,6 +329,7 @@ class LogEngine(BaseEngine):
 class OmsEngine(BaseEngine):
     """
     Provides order management system function for VN Trader.
+    提供订单管理系统函数给VN Trader
     """
 
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine):

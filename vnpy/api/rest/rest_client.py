@@ -90,7 +90,7 @@ class RestClient(object):
         """
         self.url_base = ''  # type: str
         self._active = False
-
+        # 队列
         self._queue = Queue()
         self._pool = None  # type: Pool
 

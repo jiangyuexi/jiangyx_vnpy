@@ -80,12 +80,12 @@ class HuobiGateway(BaseGateway):
     def __init__(self, event_engine):
         """Constructor"""
         super().__init__(event_engine, "HUOBI")
-
+        # 本地交易管理器
         self.order_manager = LocalOrderManager(self)
-
+        # rest api
         self.rest_api = HuobiRestApi(self)
-        # self.trade_ws_api = HuobiTradeWebsocketApi(self)
-        # self.market_ws_api = HuobiDataWebsocketApi(self)
+        self.trade_ws_api = HuobiTradeWebsocketApi(self)
+        self.market_ws_api = HuobiDataWebsocketApi(self)
 
     def connect(self, setting: dict):
         """"""
@@ -102,8 +102,8 @@ class HuobiGateway(BaseGateway):
 
         self.rest_api.connect(key, secret, session_number,
                               proxy_host, proxy_port)
-        # self.trade_ws_api.connect(key, secret, proxy_host, proxy_port)
-        # self.market_ws_api.connect(key, secret, proxy_host, proxy_port)
+        self.trade_ws_api.connect(key, secret, proxy_host, proxy_port)
+        self.market_ws_api.connect(key, secret, proxy_host, proxy_port)
 
         self.init_query()
 
@@ -131,8 +131,8 @@ class HuobiGateway(BaseGateway):
     def close(self):
         """"""
         self.rest_api.stop()
-        # self.trade_ws_api.stop()
-        # self.market_ws_api.stop()
+        self.trade_ws_api.stop()
+        self.market_ws_api.stop()
 
     def process_timer_event(self, event: Event):
         """"""

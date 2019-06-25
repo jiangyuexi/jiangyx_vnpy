@@ -101,7 +101,9 @@ class RpcObject(object):
 
 
 class RpcServer(RpcObject):
-    """"""
+    """
+    RPC （远程调用协议）   的服务
+    """
 
     def __init__(self, rep_address, pub_address):
         """

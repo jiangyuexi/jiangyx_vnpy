@@ -16,15 +16,19 @@ class Event:
     Event object consists of a type string which is used 
     by event engine for distributing event, and a data 
     object which contains the real data. 
+    本类提供给EventEngine 使用
     """
 
     def __init__(self, type: str, data: Any = None):
         """"""
+        # str类型的type
         self.type = type
+        # 数据
         self.data = data
 
 
 # Defines handler function to be used in event engine.
+# 定义处理函数在EventEngine使用
 HandlerType = Callable[[Event], None]
 
 

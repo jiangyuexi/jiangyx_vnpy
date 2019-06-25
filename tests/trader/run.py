@@ -43,12 +43,14 @@ def main():
     # main_engine.add_gateway(TigerGateway)
     # main_engine.add_gateway(OesGateway)
     # main_engine.add_gateway(OkexGateway)
+    # 添加火币的交互通道
     main_engine.add_gateway(HuobiGateway)
     # main_engine.add_gateway(BitfinexGateway)
     # main_engine.add_gateway(OnetokenGateway)
     # main_engine.add_gateway(OkexfGateway)
     # main_engine.add_gateway(HbdmGateway)
-    
+
+    # 把 app 保存到 apps 和 engines 里
     main_engine.add_app(CtaStrategyApp)
     main_engine.add_app(CtaBacktesterApp)
     main_engine.add_app(CsvLoaderApp)

@@ -15,3 +15,5 @@ class BaseApp(ABC):
     engine_class = None     # App engine class
     widget_name = ""        # Class name of app widget
     icon_name = ""          # Icon file name of app widget
+
+    

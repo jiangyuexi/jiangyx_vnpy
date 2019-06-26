@@ -1,5 +1,6 @@
 """
 General constant string used in VN Trader.
+枚举常量
 """
 
 from enum import Enum
@@ -27,7 +28,7 @@ class Offset(Enum):
 
 class Status(Enum):
     """
-    Order status.
+    Order status.订单状态
     """
     SUBMITTING = "提交中"
     NOTTRADED = "未成交"
@@ -39,7 +40,7 @@ class Status(Enum):
 
 class Product(Enum):
     """
-    Product class.
+    Product class. 产品枚举类
     """
     EQUITY = "股票"
     FUTURES = "期货"
@@ -75,9 +76,9 @@ class OptionType(Enum):
 
 class Exchange(Enum):
     """
-    Exchange.
+    Exchange.  交易所
     """
-    # Chinese
+    # Chinese  中国
     CFFEX = "CFFEX"         # China Financial Futures Exchange
     SHFE = "SHFE"           # Shanghai Futures Exchange
     CZCE = "CZCE"           # Zhengzhou Commodity Exchange
@@ -88,7 +89,7 @@ class Exchange(Enum):
     SGE = "SGE"             # Shanghai Gold Exchange
     WXE = "WXE"             # Wuxi Steel Exchange
 
-    # Global
+    # Global 全球
     SMART = "SMART"         # Smart Router for US stocks
     NYMEX = "NYMEX"         # New York Mercantile Exchange
     GLOBEX = "GLOBEX"       # Globex of CME
@@ -107,19 +108,23 @@ class Exchange(Enum):
     TOCOM = "TOCOM"         # Tokyo Commodity Exchange
     EUNX = "EUNX"           # Euronext Exchange
 
-    # CryptoCurrency
+    # CryptoCurrency  加密货币交易所
     BITMEX = "BITMEX"
     OKEX = "OKEX"
+    # 火币
     HUOBI = "HUOBI"
     BITFINEX = "BITFINEX"
 
 
 class Currency(Enum):
     """
-    Currency.
+    Currency. 法币
     """
+    # 美元
     USD = "USD"
+    # 港元
     HKD = "HKD"
+    # 人民币
     CNY = "CNY"
 
 

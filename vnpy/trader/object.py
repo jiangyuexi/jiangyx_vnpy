@@ -16,11 +16,14 @@ class BaseData:
     """
     Any data object needs a gateway_name as source 
     and should inherit base data.
+    通信类的名字
     """
-
+    # 通信类的名字
     gateway_name: str
 
-
+# "就是你定义一个很普通的类，@dataclass 装饰器可以帮你生成 " \
+# "__repr__ __init__ 等等方法，就不用自己写一遍了。但是此装饰器返回的依然是一个" \
+# " class，这意味着并没有带来任何不便，你依然可以使用继承、metaclass、docstring、定义方法等。"
 @dataclass
 class TickData(BaseData):
     """
@@ -28,6 +31,7 @@ class TickData(BaseData):
         * last trade in market
         * orderbook snapshot
         * intraday market statistics.
+        tick数据结构
     """
 
     symbol: str
@@ -79,6 +83,7 @@ class TickData(BaseData):
 class BarData(BaseData):
     """
     Candlestick bar data of a certain trading period.
+    开高低收 数据结构
     """
 
     symbol: str
@@ -102,6 +107,7 @@ class OrderData(BaseData):
     """
     Order data contains information for tracking lastest status 
     of a specific order.
+    订单数据结构
     """
 
     symbol: str

@@ -35,7 +35,7 @@ class BaseGateway(ABC):
     """
     Abstract gateway class for creating gateways connection
     to different trading systems.
-
+    抽象通信类，不同的交易所（系统）的访问接口。
     # How to implement a gateway:
 
     ---

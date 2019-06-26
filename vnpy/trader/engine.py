@@ -98,6 +98,8 @@ class MainEngine:
         """
         # 日志引擎
         self.add_engine(LogEngine)
+        # 提供订单管理系统函数给VN
+        # Trader
         self.add_engine(OmsEngine)
         # 邮件引擎
         self.add_engine(EmailEngine)

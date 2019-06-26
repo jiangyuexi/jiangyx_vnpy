@@ -1,5 +1,6 @@
 """
 Event type string used in VN Trader.
+事件字符串
 """
 
 from vnpy.event import EVENT_TIMER  # noqa

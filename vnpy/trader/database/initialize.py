@@ -5,8 +5,10 @@ from .database import BaseDatabaseManager, Driver
 def init(settings: dict) -> BaseDatabaseManager:
     driver = Driver(settings["driver"])
     if driver is Driver.MONGODB:
+        # 如果是 nosql ， 则初始化nosql的数据库
         return init_nosql(driver=driver, settings=settings)
     else:
+        # 如果是 关系型数据库 ， 则初始化关系型数据库
         return init_sql(driver=driver, settings=settings)
 
 

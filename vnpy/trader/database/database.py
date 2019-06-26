@@ -9,6 +9,9 @@ if TYPE_CHECKING:
 
 
 class Driver(Enum):
+    """
+    枚举数据库
+    """
     SQLITE = "sqlite"
     MYSQL = "mysql"
     POSTGRESQL = "postgresql"
@@ -16,6 +19,9 @@ class Driver(Enum):
 
 
 class BaseDatabaseManager(ABC):
+    """
+        数据库基类
+    """
 
     @abstractmethod
     def load_bar_data(

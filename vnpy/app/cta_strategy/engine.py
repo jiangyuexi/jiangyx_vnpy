@@ -37,6 +37,7 @@ from vnpy.trader.constant import (
     Status
 )
 from vnpy.trader.utility import load_json, save_json, extract_vt_symbol
+# 初始化数据库
 from vnpy.trader.database import database_manager
 from vnpy.trader.rqdata import rqdata_client
 

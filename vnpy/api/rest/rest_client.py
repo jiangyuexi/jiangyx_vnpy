@@ -78,7 +78,7 @@ class Request(object):
 class RestClient(object):
     """
     HTTP Client designed for all sorts of trading RESTFul API.
-
+    rest api 模板类
     * Reimplement sign function to add signature function.
     * Reimplement on_failed function to handle Non-2xx responses.
     * Use on_failed parameter in add_request function for individual Non-2xx response handling.
@@ -89,6 +89,7 @@ class RestClient(object):
         """
         """
         self.url_base = ''  # type: str
+        # 本类线程开关
         self._active = False
         # 队列
         self._queue = Queue()
@@ -119,7 +120,9 @@ class RestClient(object):
             return
 
         self._active = True
+        # 线程池，n个线程
         self._pool = Pool(n)
+        # 线程池处理函数 _run
         self._pool.apply_async(self._run)
 
     def stop(self):
@@ -180,6 +183,7 @@ class RestClient(object):
                 try:
                     request = self._queue.get(timeout=1)
                     try:
+                        # 处理队列里拿到 request
                         self._process_request(request, session)
                     finally:
                         self._queue.task_done()

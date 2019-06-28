@@ -124,6 +124,7 @@ class MainEngine:
     def get_engine(self, engine_name: str):
         """
         Return engine object by name.
+        根据名字返回引擎
         """
         engine = self.engines.get(engine_name, None)
         if not engine:
@@ -160,6 +161,7 @@ class MainEngine:
     def connect(self, setting: dict, gateway_name: str):
         """
         Start connection of a specific gateway.
+        开始链接指定的geteway
         """
         gateway = self.get_gateway(gateway_name)
         if gateway:
@@ -168,6 +170,7 @@ class MainEngine:
     def subscribe(self, req: SubscribeRequest, gateway_name: str):
         """
         Subscribe tick data update of a specific gateway.
+        从指定的gateway 订阅tick数据
         """
         gateway = self.get_gateway(gateway_name)
         if gateway:
@@ -176,6 +179,7 @@ class MainEngine:
     def send_order(self, req: OrderRequest, gateway_name: str):
         """
         Send new order request to a specific gateway.
+        发送新的订单数据到指定的geteway
         """
         gateway = self.get_gateway(gateway_name)
         if gateway:
@@ -186,6 +190,7 @@ class MainEngine:
     def cancel_order(self, req: CancelRequest, gateway_name: str):
         """
         Send cancel order request to a specific gateway.
+        发送撤单数据到指定的gateway
         """
         gateway = self.get_gateway(gateway_name)
         if gateway:

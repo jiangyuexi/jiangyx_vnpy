@@ -31,11 +31,12 @@ class TickData(BaseData):
         * last trade in market
         * orderbook snapshot
         * intraday market statistics.
-        tick数据结构
+        tick数据结构， 请求得到的数据结构
     """
 
     symbol: str
     exchange: Exchange
+    timestamp: float
     datetime: datetime
 
     name: str = ""
@@ -258,6 +259,7 @@ class ContractData(BaseData):
 class SubscribeRequest:
     """
     Request sending to specific gateway for subscribing tick data update.
+    接收tick数据
     """
 
     symbol: str

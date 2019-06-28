@@ -4,8 +4,9 @@ Global setting of VN Trader.
 
 from logging import CRITICAL
 
-# from vnpy.trader.database.database import Driver
 from .utility import load_json
+
+
 
 # 基本配置信息
 SETTINGS = {
@@ -26,7 +27,7 @@ SETTINGS = {
 
     "rqdata.username": "",
     "rqdata.password": "",
-
+    # mysql 数据库
     "database.driver": "mysql",  # see database.Driver
     "database.database": "myvnpycore",  # for sqlite, use this as filepath
     "database.host": "47.107.61.193",

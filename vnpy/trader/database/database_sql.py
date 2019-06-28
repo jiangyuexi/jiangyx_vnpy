@@ -8,6 +8,7 @@ from peewee import (
     Database,
     DateTimeField,
     FloatField,
+    DoubleField,
     Model,
     MySQLDatabase,
     PostgresqlDatabase,
@@ -27,6 +28,7 @@ def init(driver: Driver, settings: dict):
         Driver.MYSQL: init_mysql,
         Driver.POSTGRESQL: init_postgresql,
     }
+    # 断言
     assert driver in init_funcs
 
     db = init_funcs[driver](settings)
@@ -67,7 +69,6 @@ def init_models(db: Database, driver: Driver):
 
         Index is defined unique with datetime, interval, symbol
         """
-
         id = AutoField()
         symbol: str = CharField()
         exchange: str = CharField()
@@ -149,12 +150,15 @@ def init_models(db: Database, driver: Driver):
         Tick data for database storage.
 
         Index is defined unique with (datetime, symbol)
+        数据库里的tick数据结构
         """
 
         id = AutoField()
 
         symbol: str = CharField()
         exchange: str = CharField()
+        # 为什么数据库没有更新 时间戳
+        timestamp: float = DoubleField()
         datetime: datetime = DateTimeField()
 
         name: str = CharField()
@@ -195,17 +199,19 @@ def init_models(db: Database, driver: Driver):
 
         class Meta:
             database = db
-            indexes = ((("symbol", "exchange", "datetime"), True),)
+            indexes = ((("symbol", "exchange", "timestamp", "datetime"), True),)
 
         @staticmethod
         def from_tick(tick: TickData):
             """
             Generate DbTickData object from TickData.
+            从tickData对象生成数据库tick对象
             """
             db_tick = DbTickData()
 
             db_tick.symbol = tick.symbol
             db_tick.exchange = tick.exchange.value
+            db_tick.timestamp = tick.timestamp
             db_tick.datetime = tick.datetime
             db_tick.name = tick.name
             db_tick.volume = tick.volume
@@ -249,10 +255,12 @@ def init_models(db: Database, driver: Driver):
         def to_tick(self):
             """
             Generate TickData object from DbTickData.
+            从数据库获取的Tick数据生成 tickData数据对象。
             """
             tick = TickData(
                 symbol=self.symbol,
                 exchange=Exchange(self.exchange),
+                timestamp=self.timestamp,
                 datetime=self.datetime,
                 name=self.name,
                 volume=self.volume,
@@ -303,6 +311,7 @@ def init_models(db: Database, driver: Driver):
                         DbTickData.insert(tick).on_conflict(
                             update=tick,
                             conflict_target=(
+                                # DbTickData.timestamp,
                                 DbTickData.datetime,
                                 DbTickData.symbol,
                                 DbTickData.exchange,
@@ -315,6 +324,7 @@ def init_models(db: Database, driver: Driver):
                             c).on_conflict_replace().execute()
 
     db.connect()
+    # 如何在这里指定数据库表名， 或者根据日期新建数据库，每个数据库的表一致。
     db.create_tables([DbBarData, DbTickData])
     return DbBarData, DbTickData
 
@@ -391,6 +401,12 @@ class SqlManager(BaseDatabaseManager):
     def get_newest_tick_data(
         self, symbol: str, exchange: "Exchange"
     ) -> Optional["TickData"]:
+        """
+        获取最新的一个tick数据
+        :param symbol: 
+        :param exchange:  交易所
+        :return: 
+        """
         s = (
             self.class_tick.select()
             .where(

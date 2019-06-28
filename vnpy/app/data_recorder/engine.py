@@ -24,18 +24,22 @@ EVENT_RECORDER_UPDATE = "eRecorderUpdate"
 
 
 class RecorderEngine(BaseEngine):
-    """"""
+    """
+    数据收集引擎
+    """
+    # 配置文件
     setting_filename = "data_recorder_setting.json"
 
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine):
         """"""
         super().__init__(main_engine, event_engine, APP_NAME)
-
+        # 线程安全队列 数据库使用
         self.queue = Queue()
         self.thread = Thread(target=self.run)
         self.active = False
-
+        # tick数据
         self.tick_recordings = {}
+        # bar 数据
         self.bar_recordings = {}
         self.bar_generators = {}
 
@@ -59,15 +63,22 @@ class RecorderEngine(BaseEngine):
         save_json(self.setting_filename, setting)
 
     def run(self):
-        """"""
+        """
+        数据收集引擎，事件循环函数
+        :return: 
+        """
         while self.active:
             try:
+                # 从队列获取数据， 超时1秒
                 task = self.queue.get(timeout=1)
+                # 类型， 数据
                 task_type, data = task
 
                 if task_type == "tick":
+                    # tick 数据存数据库
                     database_manager.save_tick_data([data])
                 elif task_type == "bar":
+                    # bar 数据存数据库
                     database_manager.save_bar_data([data])
 
             except Empty:
@@ -176,11 +187,15 @@ class RecorderEngine(BaseEngine):
         contract = event.data
         vt_symbol = contract.vt_symbol
 
-        if (vt_symbol in self.tick_recordings or vt_symbol in self.bar_recordings):
+        if(vt_symbol in self.tick_recordings or vt_symbol in self.bar_recordings):
             self.subscribe(contract)
 
     def write_log(self, msg: str):
-        """"""
+        """
+        向事件引擎 队列里丢 EVENT_RECORDER_LOG = "eRecorderLog" 类型的事件
+        :param msg: 
+        :return: 
+        """
         event = Event(
             EVENT_RECORDER_LOG,
             msg

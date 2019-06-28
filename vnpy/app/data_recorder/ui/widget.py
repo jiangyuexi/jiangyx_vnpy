@@ -25,6 +25,7 @@ class RecorderManager(QtWidgets.QWidget):
 
         self.main_engine = main_engine
         self.event_engine = event_engine
+        # APP_NAME = "DataRecorder" 从主引擎里获取数据存储引擎对象
         self.recorder_engine = main_engine.get_engine(APP_NAME)
 
         self.init_ui()

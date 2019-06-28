@@ -246,6 +246,7 @@ class WebsocketClient(object):
     def on_packet(packet: dict):
         """
         Callback when receiving data from server.
+        回调函数，从服务器接收数据
         """
         pass
 

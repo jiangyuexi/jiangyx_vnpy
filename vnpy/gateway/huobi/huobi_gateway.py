@@ -11,6 +11,7 @@ import hashlib
 import hmac
 from copy import copy
 from datetime import datetime
+from time import time
 
 from vnpy.event import Event
 from vnpy.api.rest import RestClient, Request
@@ -171,7 +172,9 @@ class HuobiRestApi(RestClient):
         Generate HUOBI signature.
         """
         request.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36"
+            "User-Agent":
+                "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36"
         }
         params_with_signature = create_signature(
             self.key,
@@ -637,6 +640,7 @@ class HuobiDataWebsocketApi(HuobiWebsocketApiBase):
         tick = TickData(
             symbol=symbol,
             name=symbol_name_map.get(symbol, ""),
+            timestamp=time(),
             exchange=Exchange.HUOBI,
             datetime=datetime.now(),
             gateway_name=self.gateway_name,
@@ -676,8 +680,9 @@ class HuobiDataWebsocketApi(HuobiWebsocketApiBase):
         """行情深度推送 """
         symbol = data["ch"].split(".")[1]
         tick = self.ticks[symbol]
-        tick.datetime = datetime.fromtimestamp(data["ts"] / 1000)
-        
+        tick.datetime = datetime.fromtimestamp(data["ts"] / 1000.0)
+        tick.timestamp = float(data["ts"])
+
         bids = data["tick"]["bids"]
         for n in range(5):
             price, volume = bids[n]
@@ -697,8 +702,9 @@ class HuobiDataWebsocketApi(HuobiWebsocketApiBase):
         """市场细节推送"""
         symbol = data["ch"].split(".")[1]
         tick = self.ticks[symbol]
-        tick.datetime = datetime.fromtimestamp(data["ts"] / 1000)
-        
+        tick.datetime = datetime.fromtimestamp(data["ts"] / 1000.0)
+
+        tick.timestamp = float(data["ts"])
         tick_data = data["tick"]
         tick.open_price = float(tick_data["open"])
         tick.high_price = float(tick_data["high"])

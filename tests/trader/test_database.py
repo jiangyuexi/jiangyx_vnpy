@@ -61,6 +61,7 @@ tick = TickData(
     gateway_name="DB",
     symbol="test_symbol",
     exchange=Exchange.BITMEX,
+    timestamp=now().timestamp(),
     datetime=now(),
     name="DB_test_symbol",
 )

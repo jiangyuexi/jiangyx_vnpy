@@ -650,7 +650,7 @@ class HuobiDataWebsocketApi(HuobiWebsocketApiBase):
         # Subscribe to market depth update
         self.req_id += 1
         req = {
-            "sub": f"market.{symbol}.depth.step0",
+            "sub": f"market.{symbol}.depth.step1",
             "id": str(self.req_id)     
         }
         self.send_packet(req)
@@ -680,8 +680,8 @@ class HuobiDataWebsocketApi(HuobiWebsocketApiBase):
         """行情深度推送 """
         symbol = data["ch"].split(".")[1]
         tick = self.ticks[symbol]
-        tick.datetime = datetime.fromtimestamp(data["ts"] / 1000.0)
-        tick.timestamp = float(data["ts"])
+        tick.datetime = datetime.fromtimestamp(data["ts"] // 1000)
+        tick.timestamp = float(data["ts"]/1000.0)
 
         bids = data["tick"]["bids"]
         for n in range(5):
@@ -702,9 +702,9 @@ class HuobiDataWebsocketApi(HuobiWebsocketApiBase):
         """市场细节推送"""
         symbol = data["ch"].split(".")[1]
         tick = self.ticks[symbol]
-        tick.datetime = datetime.fromtimestamp(data["ts"] / 1000.0)
+        tick.datetime = datetime.fromtimestamp(data["ts"] // 1000)
 
-        tick.timestamp = float(data["ts"])
+        tick.timestamp = float(data["ts"] /1000.0)
         tick_data = data["tick"]
         tick.open_price = float(tick_data["open"])
         tick.high_price = float(tick_data["high"])

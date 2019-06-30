@@ -1,8 +1,9 @@
+from time import sleep
 
 from vnpy.event import EventEngine
 
 from vnpy.trader.engine import MainEngine
-from vnpy.trader.ui import MainWindow, create_qapp
+
 
 # from vnpy.gateway.bitmex import BitmexGateway
 # from vnpy.gateway.futu import FutuGateway
@@ -26,7 +27,7 @@ from vnpy.app.data_recorder import DataRecorderApp
 def main():
     """"""
     # 创建 QApplication  对象 并进行初始化
-    qapp = create_qapp()
+
     # 事件引擎
     event_engine = EventEngine()
     # 把事件引擎附加到主引擎里
@@ -43,10 +44,13 @@ def main():
 
     main_engine.add_app(DataRecorderApp)
 
-    main_window = MainWindow(main_engine, event_engine)
-    main_window.showMaximized()
-    # qt 事件循环
-    qapp.exec()
+    while True:
+
+        # 连接火币平台
+    
+
+        # 一天
+        sleep(24 * 60 * 60)
 
 
 if __name__ == "__main__":

@@ -544,6 +544,7 @@ class ConnectDialog(QtWidgets.QDialog):
     def connect(self):
         """
         Get setting value from line edits and connect the gateway.
+        获取配置从文本框，然后连接交易通道
         """
         setting = {}
         for field_name, tp in self.widgets.items():

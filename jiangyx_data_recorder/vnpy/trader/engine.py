@@ -1,4 +1,10 @@
+# -*- coding: utf-8 -*-
 """
+时间:
+文件名:
+描述:
+
+@author: jiangyuexi1992@qq.com
 """
 
 import logging
@@ -272,7 +278,7 @@ class LogEngine(BaseEngine):
 
         self.level = SETTINGS["log.level"]
 
-        self.logger = logging.getLogger("VN Trader")
+        self.logger = logging.getLogger("jiangyxlog")
         self.logger.setLevel(self.level)
 
         self.formatter = logging.Formatter(

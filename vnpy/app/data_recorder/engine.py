@@ -42,8 +42,9 @@ class RecorderEngine(BaseEngine):
         # bar 数据
         self.bar_recordings = {}
         self.bar_generators = {}
-
+        # 加载 data_recorder_setting.json
         self.load_setting()
+        注册
         self.register_event()
         self.start()
         self.put_event()

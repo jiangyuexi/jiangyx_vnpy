@@ -328,8 +328,8 @@ def init_models(db: Database, driver: Driver):
     db.connect()
     # 如何在这里指定数据库表名， 或者根据日期新建数据库，每个数据库的表一致。
 
-    DbBarData._meta.table_name = "ewrwrertewt"
-    DbTickData._meta.table_name = "tickdsfdghdhgj"
+    DbBarData._meta.table_name = "jyxBartest"
+    DbTickData._meta.table_name = "jyxTicktest"
     db.create_tables([DbBarData, DbTickData])
     return DbBarData, DbTickData
 

@@ -28,6 +28,7 @@ def generate_vt_symbol(symbol: str, exchange: Exchange):
 def _get_trader_dir(temp_name: str):
     """
     Get path where trader is running in.
+    获取路径
     """
     cwd = Path.cwd()
     temp_path = cwd.joinpath(temp_name)
@@ -54,6 +55,7 @@ TRADER_DIR, TEMP_DIR = _get_trader_dir(".vntrader")
 def get_file_path(filename: str):
     """
     Get path for temp file with filename.
+    把文件名添加到 vntrader路径里
     """
     return TEMP_DIR.joinpath(filename)
 
@@ -80,6 +82,7 @@ def get_icon_path(filepath: str, ico_name: str):
 def load_json(filename: str):
     """
     Load data from json file in temp path.
+    在temp path里加载json文件
     """
     filepath = get_file_path(filename)
 

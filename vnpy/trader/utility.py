@@ -28,6 +28,7 @@ def generate_vt_symbol(symbol: str, exchange: Exchange):
 def _get_trader_dir(temp_name: str):
     """
     Get path where trader is running in.
+    获取 路径
     """
     cwd = Path.cwd()
     temp_path = cwd.joinpath(temp_name)

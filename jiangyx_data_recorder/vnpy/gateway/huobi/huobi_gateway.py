@@ -1,6 +1,12 @@
+# -*- coding: utf-8 -*-
 """
-火币交易接口
+时间:
+文件名:
+描述:火币交易接口
+
+@author: jiangyuexi1992@qq.com
 """
+
 
 import re
 import urllib
@@ -11,6 +17,8 @@ import hashlib
 import hmac
 from copy import copy
 from datetime import datetime
+
+from gevent import sleep
 from time import time
 
 from vnpy.event import Event
@@ -110,6 +118,7 @@ class HuobiGateway(BaseGateway):
 
     def subscribe(self, req: SubscribeRequest):
         """"""
+        sleep(5)
         self.market_ws_api.subscribe(req)
         self.trade_ws_api.subscribe(req)
 
@@ -171,11 +180,11 @@ class HuobiRestApi(RestClient):
         """
         Generate HUOBI signature.
         """
-        request.headers = {
-            "User-Agent":
-                "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36"
-        }
+        # request.headers = {
+        #     "User-Agent":
+        #         "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 "
+        #         "(KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36"
+        # }
         params_with_signature = create_signature(
             self.key,
             request.method,
@@ -453,6 +462,7 @@ class HuobiRestApi(RestClient):
         error_msg = data["err-msg"]
 
         self.gateway.write_log(f"{func}请求出错，代码：{error_code}，信息：{error_msg}")
+
         return True
 
 

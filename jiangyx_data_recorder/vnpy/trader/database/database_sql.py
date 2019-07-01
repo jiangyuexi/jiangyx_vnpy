@@ -1,5 +1,6 @@
 """"""
 from datetime import datetime
+import datetime
 from typing import List, Optional, Sequence, Type
 
 from peewee import (
@@ -328,8 +329,8 @@ def init_models(db: Database, driver: Driver):
     db.connect()
     # 如何在这里指定数据库表名， 或者根据日期新建数据库，每个数据库的表一致。
 
-    DbBarData._meta.table_name = "jyxBartest"
-    DbTickData._meta.table_name = "jyxTicktest"
+    DbBarData._meta.table_name = "DbBarData" + str(datetime.date.today())
+    DbTickData._meta.table_name = "DbTickData" + str(datetime.date.today())
     db.create_tables([DbBarData, DbTickData])
     return DbBarData, DbTickData
 

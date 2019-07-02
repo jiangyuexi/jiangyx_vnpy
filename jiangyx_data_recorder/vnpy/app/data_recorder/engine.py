@@ -5,6 +5,7 @@ from queue import Queue, Empty
 from copy import copy
 
 from vnpy.event import Event, EventEngine
+from vnpy.trader.database import database_manager
 from vnpy.trader.engine import BaseEngine, MainEngine
 from vnpy.trader.object import (
     SubscribeRequest,
@@ -14,8 +15,6 @@ from vnpy.trader.object import (
 )
 from vnpy.trader.event import EVENT_TICK, EVENT_CONTRACT
 from vnpy.trader.utility import load_json, save_json, BarGenerator
-from vnpy.trader.database import database_manager
-
 
 APP_NAME = "DataRecorder"
 

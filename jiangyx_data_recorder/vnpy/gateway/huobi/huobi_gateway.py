@@ -118,7 +118,8 @@ class HuobiGateway(BaseGateway):
 
     def subscribe(self, req: SubscribeRequest):
         """"""
-        sleep(5)
+        # 等待websocket对象创建成功
+        sleep(10)
         self.market_ws_api.subscribe(req)
         self.trade_ws_api.subscribe(req)
 

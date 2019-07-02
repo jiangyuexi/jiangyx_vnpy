@@ -45,7 +45,6 @@ def main():
     # main_engine.add_gateway(HbdmGateway)
 
     # 把 app 保存到 apps 和 engines 里
-
     main_engine.add_app(DataRecorderApp)
     # 获取所有交易通道
     gateway_names = main_engine.get_all_gateway_names()

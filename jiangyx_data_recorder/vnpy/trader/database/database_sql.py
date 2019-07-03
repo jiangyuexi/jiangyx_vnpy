@@ -333,11 +333,9 @@ def init_models(db: Database, driver: Driver):
     # DbTickData._meta.table_name = "DbTickData" + str(datetime.date.today()) + str(datetime.hour) + str(datetime.minute)
 
     DbBarData._meta.table_name = "DbBarData" + str(datetime.date.today()) + \
-                                 str(time.strftime('%H', time.localtime())) + \
-                                 str(time.strftime('%M', time.localtime()))
+                                 str(time.strftime('%H', time.localtime()))
     DbTickData._meta.table_name = "DbTickData" + str(datetime.date.today()) + \
-                                  str(time.strftime('%H', time.localtime())) +\
-                                  str(time.strftime('%M', time.localtime()))
+                                  str(time.strftime('%H', time.localtime()))
     db.create_tables([DbBarData, DbTickData])
     return DbBarData, DbTickData
 

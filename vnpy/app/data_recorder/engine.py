@@ -44,7 +44,7 @@ class RecorderEngine(BaseEngine):
         self.bar_generators = {}
         # 加载 data_recorder_setting.json
         self.load_setting()
-        注册
+        # 注册 事件
         self.register_event()
         self.start()
         self.put_event()

@@ -28,6 +28,7 @@ from vnpy.app.data_recorder import DataRecorderApp
 
 from vnpy.trader.noui.no_widget import ConnectNoDialog
 
+
 def main():
     """"""
     # 创建 QApplication  对象 并进行初始化

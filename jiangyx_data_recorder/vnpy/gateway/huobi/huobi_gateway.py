@@ -651,7 +651,7 @@ class HuobiDataWebsocketApi(HuobiWebsocketApiBase):
         tick = TickData(
             symbol=symbol,
             name=symbol_name_map.get(symbol, ""),
-            timestamp=time(),
+            timestamp=0.0,
             exchange=Exchange.HUOBI,
             datetime=datetime.now(),
             gateway_name=self.gateway_name,

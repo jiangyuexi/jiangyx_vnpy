@@ -69,6 +69,7 @@ currencies = set()
 class OkexfGateway(BaseGateway):
     """
     VN Trader Gateway for OKEX connection.
+    OKEX期货
     """
 
     default_setting = {
@@ -216,7 +217,7 @@ class OkexfRestApi(RestClient):
 
         self.init(REST_HOST, proxy_host, proxy_port)
         self.start(session_number)
-        self.gateway.write_log("REST API启动成功")
+        self.gateway.write_log("OKEX 合约  REST API启动成功")
 
         self.query_time()
         self.query_contract()
@@ -346,7 +347,7 @@ class OkexfRestApi(RestClient):
             currencies.add(instrument_data["underlying_index"])
             currencies.add(instrument_data["quote_currency"])
 
-        self.gateway.write_log("合约信息查询成功")
+        self.gateway.write_log("OKEX 合约 合约信息查询成功")
 
         # Start websocket api after instruments data collected
         self.gateway.ws_api.start()
@@ -365,7 +366,7 @@ class OkexfRestApi(RestClient):
                 gateway_name=self.gateway_name,
             )  
             self.gateway.on_account(account)      
-        self.gateway.write_log("账户资金查询成功")
+        self.gateway.write_log("OKEX 合约 账户资金查询成功")
 
     def on_query_position(self, data, request):
         """"""
@@ -423,7 +424,7 @@ class OkexfRestApi(RestClient):
         """"""
         server_time = data["iso"]
         local_time = datetime.utcnow().isoformat()
-        msg = f"服务器时间：{server_time}，本机时间：{local_time}"
+        msg = f"OKEX 合约 服务器时间：{server_time}，本机时间：{local_time}"
         self.gateway.write_log(msg)
 
     def on_send_order_failed(self, status_code: str, request: Request):
@@ -435,7 +436,7 @@ class OkexfRestApi(RestClient):
         order.status = Status.REJECTED
         order.time = datetime.now().strftime("%H:%M:%S.%f")        
         self.gateway.on_order(order)
-        msg = f"委托失败，状态码：{status_code}，信息：{request.response.text}"
+        msg = f"OKEX 合约 委托失败，状态码：{status_code}，信息：{request.response.text}"
         self.gateway.write_log(msg)
 
     def on_send_order_error(
@@ -463,7 +464,7 @@ class OkexfRestApi(RestClient):
             order.status = Status.REJECTED
             self.gateway.on_order(order)
 
-            self.gateway.write_log(f"委托失败：{error_msg}")
+            self.gateway.write_log(f"OKEX 合约 委托失败：{error_msg}")
 
     def on_cancel_order_error(
         self, exception_type: type, exception_value: Exception, tb, request: Request
@@ -495,7 +496,7 @@ class OkexfRestApi(RestClient):
         """
         Callback to handle request failed.
         """
-        msg = f"请求失败，状态码：{status_code}，信息：{request.response.text}"
+        msg = f"OKEX 合约 请求失败，状态码：{status_code}，信息：{request.response.text}"
         self.gateway.write_log(msg)
 
     def on_error(
@@ -504,7 +505,7 @@ class OkexfRestApi(RestClient):
         """
         Callback to handler request exception.
         """
-        msg = f"触发异常，状态码：{exception_type}，信息：{exception_value}"
+        msg = f"OKEX 合约 触发异常，状态码：{exception_type}，信息：{exception_value}"
         self.gateway.write_log(msg)
 
         sys.stderr.write(
@@ -562,6 +563,7 @@ class OkexfWebsocketApi(WebsocketClient):
             symbol=req.symbol,
             exchange=req.exchange,
             name=req.symbol,
+            timestamp=0.0,
             datetime=datetime.now(),
             gateway_name=self.gateway_name,
         )
@@ -581,12 +583,12 @@ class OkexfWebsocketApi(WebsocketClient):
 
     def on_connected(self):
         """"""
-        self.gateway.write_log("Websocket API连接成功")
+        self.gateway.write_log("OKEX 合约 Websocket API连接成功")
         self.login()
 
     def on_disconnected(self):
         """"""
-        self.gateway.write_log("Websocket API连接断开")
+        self.gateway.write_log("OKEX 合约 Websocket API连接断开")
 
     def on_packet(self, packet: dict):
         """"""
@@ -596,7 +598,7 @@ class OkexfWebsocketApi(WebsocketClient):
                 return
             elif event == "error":
                 msg = packet["message"]
-                self.gateway.write_log(f"Websocket API请求异常：{msg}")
+                self.gateway.write_log(f"OKEX 合约 Websocket API请求异常：{msg}")
             elif event == "login":
                 self.on_login(packet)
         else:
@@ -610,7 +612,7 @@ class OkexfWebsocketApi(WebsocketClient):
 
     def on_error(self, exception_type: type, exception_value: Exception, tb):
         """"""
-        msg = f"触发异常，状态码：{exception_type}，信息：{exception_value}"
+        msg = f"OKEX 合约 触发异常，状态码：{exception_type}，信息：{exception_value}"
         self.gateway.write_log(msg)
 
         sys.stderr.write(self.exception_detail(exception_type, exception_value, tb))
@@ -688,10 +690,10 @@ class OkexfWebsocketApi(WebsocketClient):
         success = data.get("success", False)
 
         if success:
-            self.gateway.write_log("Websocket API登录成功")
+            self.gateway.write_log("OKEX 合约 Websocket API登录成功")
             self.subscribe_topic()
         else:
-            self.gateway.write_log("Websocket API登录失败")
+            self.gateway.write_log("OKEX 合约 Websocket API登录失败")
 
     def on_ticker(self, d):
         """"""

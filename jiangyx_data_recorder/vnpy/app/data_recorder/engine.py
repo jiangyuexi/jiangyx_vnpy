@@ -118,7 +118,7 @@ class RecorderEngine(BaseEngine):
 
     def process_contract_event(self, event: Event):
         """
-        事件函数
+        事件函数  交易对
         :param event: 
         :return: 
         """

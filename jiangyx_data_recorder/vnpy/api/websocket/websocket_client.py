@@ -114,6 +114,7 @@ class WebsocketClient(object):
     def _send_text(self, text: str):
         """
         Send a text string to server.
+        发送websocket 字符串到服务器
         """
         ws = self._ws
         if ws:

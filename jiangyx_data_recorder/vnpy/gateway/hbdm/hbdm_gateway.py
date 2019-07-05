@@ -13,6 +13,7 @@ from copy import copy
 from datetime import datetime
 from threading import Lock
 from typing import Sequence
+import time
 
 from vnpy.event import Event
 from vnpy.api.rest import RestClient, Request
@@ -84,7 +85,7 @@ INTERVAL_VT2HBDM = {
 CONTRACT_TYPE_MAP = {
     "this_week": "CW",
     "next_week": "NW",
-    "this_quarter": "CQ"
+    "quarter": "CQ"
 }
 
 
@@ -136,6 +137,7 @@ class HbdmGateway(BaseGateway):
 
     def subscribe(self, req: SubscribeRequest):
         """"""
+        time.sleep(10)
         self.market_ws_api.subscribe(req)
 
     def send_order(self, req: OrderRequest):
@@ -1015,6 +1017,7 @@ class HbdmDataWebsocketApi(HbdmWebsocketApiBase):
         ws_symbol = data["ch"].split(".")[1]
         tick = self.ticks[ws_symbol]
         tick.datetime = datetime.fromtimestamp(data["ts"] / 1000)
+        tick.timestamp = float(data["ts"] / 1000.0)
         
         bids = data["tick"]["bids"]
         for n in range(5):
@@ -1036,6 +1039,7 @@ class HbdmDataWebsocketApi(HbdmWebsocketApiBase):
         ws_symbol = data["ch"].split(".")[1]
         tick = self.ticks[ws_symbol]
         tick.datetime = datetime.fromtimestamp(data["ts"] / 1000)
+        tick.timestamp = float(data["ts"] / 1000.0)
         
         tick_data = data["tick"]
         tick.open_price = tick_data["open"]

@@ -21,7 +21,7 @@ from vnpy.gateway.huobi import HuobiGateway
 # from vnpy.gateway.onetoken import OnetokenGateway
 from vnpy.gateway.okexf import OkexfGateway
 # from vnpy.gateway.xtp import XtpGateway
-# from vnpy.gateway.hbdm import HbdmGateway
+from vnpy.gateway.hbdm import HbdmGateway
 
 
 from vnpy.app.data_recorder import DataRecorderApp
@@ -39,12 +39,12 @@ def main():
     main_engine = MainEngine(event_engine)
 
     # 添加火币的交互通道
-    # main_engine.add_gateway(HuobiGateway)
+    main_engine.add_gateway(HuobiGateway)
     # main_engine.add_gateway(BitfinexGateway)
     # main_engine.add_gateway(OnetokenGateway)
     # main_engine.add_gateway(OkexGateway)
-    main_engine.add_gateway(OkexfGateway)
-    # main_engine.add_gateway(HbdmGateway)
+    # main_engine.add_gateway(OkexfGateway)
+    main_engine.add_gateway(HbdmGateway)
 
     # 把 app 保存到 apps 和 engines 里
     main_engine.add_app(DataRecorderApp)

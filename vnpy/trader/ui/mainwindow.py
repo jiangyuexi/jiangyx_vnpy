@@ -39,7 +39,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.main_engine = main_engine
         self.event_engine = event_engine
 
-        self.window_title = f"VN Trader [{TRADER_DIR}]"
+        self.window_title = f"jiangyuexi1992@qq.com [{TRADER_DIR}]"
 
         self.connect_dialogs = {}
         self.widgets = {}

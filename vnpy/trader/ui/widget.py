@@ -587,6 +587,7 @@ class TradingWidget(QtWidgets.QWidget):
 
         # Trading function area
         exchanges = self.main_engine.get_all_exchanges()
+        # 交易所下拉列表
         self.exchange_combo = QtWidgets.QComboBox()
         self.exchange_combo.addItems([exchange.value for exchange in exchanges])
 
@@ -615,7 +616,7 @@ class TradingWidget(QtWidgets.QWidget):
 
         self.volume_line = QtWidgets.QLineEdit()
         self.volume_line.setValidator(double_validator)
-
+        # 接口下拉列表
         self.gateway_combo = QtWidgets.QComboBox()
         self.gateway_combo.addItems(self.main_engine.get_all_gateway_names())
 

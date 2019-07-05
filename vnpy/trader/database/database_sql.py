@@ -83,7 +83,6 @@ def init_models(db: Database, driver: Driver):
 
         class Meta:
             database = db
-            table_name = "jiangyx"
             indexes = ((("symbol", "exchange", "interval", "datetime"), True),)
 
         @staticmethod
@@ -200,7 +199,7 @@ def init_models(db: Database, driver: Driver):
 
         class Meta:
             database = db
-            table_name = "jiangyx121"
+
             indexes = ((("symbol", "exchange", "timestamp", "datetime"), True),)
 
         @staticmethod
@@ -328,8 +327,8 @@ def init_models(db: Database, driver: Driver):
     db.connect()
     # 如何在这里指定数据库表名， 或者根据日期新建数据库，每个数据库的表一致。
 
-    DbBarData._meta.table_name = "ewrwrertewt"
-    DbTickData._meta.table_name = "tickdsfdghdhgj"
+    # DbBarData._meta.table_name = "ewrwrertewt"
+    # DbTickData._meta.table_name = "tickdsfdghdhgj"
     db.create_tables([DbBarData, DbTickData])
     return DbBarData, DbTickData
 

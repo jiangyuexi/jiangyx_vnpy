@@ -24,7 +24,7 @@ def excepthook(exctype, value, tb):
     )
 
 
-def create_qapp(app_name: str = "VN Trader"):
+def create_qapp(app_name: str = "蒋越希jiangyuexi1992@qq.com"):
     """
     Create Qt Application.
     """
@@ -33,12 +33,12 @@ def create_qapp(app_name: str = "VN Trader"):
     qapp = QtWidgets.QApplication([])
     # 设置样式表
     qapp.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    # 设置字体
+    # load_stylesheet_pyqt5# 设置字体
     font = QtGui.QFont(SETTINGS["font.family"], SETTINGS["font.size"])
     qapp.setFont(font)
     # 设置 icon
-    icon = QtGui.QIcon(get_icon_path(__file__, "vnpy.ico"))
-    qapp.setWindowIcon(icon)
+    # icon = QtGui.QIcon(get_icon_path(__file__, "vnpy.ico"))
+    # qapp.setWindowIcon(icon)
 
     if "Windows" in platform.uname():
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(

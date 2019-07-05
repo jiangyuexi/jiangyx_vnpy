@@ -23,10 +23,11 @@ os.system(r'ps -efww|grep -w "run_nextday.py"|grep -v grep|cut -c 9-15|xargs kil
 print(" start run_oneday.py")
 
 while True:
-    sleep(1 * 30)
+    sleep(1 * 60)
     # print(int(time.strftime('%M', time.localtime())) % 10)
     # 一天快结束
-    if int(time.strftime('%M', time.localtime())) % 60 >= 58:
+    if (int(time.strftime('%M', time.localtime())) % 60 >= 57) \
+            and (int(time.strftime('%H', time.localtime())) % 24 >= 23):
         if IS_ONEDAY_EXIST:
             # run_oneday.py 为未运行
             IS_ONEDAY_EXIST = False

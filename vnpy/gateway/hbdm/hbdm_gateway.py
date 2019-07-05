@@ -84,7 +84,7 @@ INTERVAL_VT2HBDM = {
 CONTRACT_TYPE_MAP = {
     "this_week": "CW",
     "next_week": "NW",
-    "this_quarter": "CQ"
+    "quarter": "CQ"
 }
 
 
@@ -104,7 +104,7 @@ class HbdmGateway(BaseGateway):
         "代理端口": "",
     }
 
-    exchagnes = [Exchange.HUOBI]
+    exchanges = [Exchange.HUOBI]
 
     def __init__(self, event_engine):
         """Constructor"""
@@ -1015,7 +1015,7 @@ class HbdmDataWebsocketApi(HbdmWebsocketApiBase):
         ws_symbol = data["ch"].split(".")[1]
         tick = self.ticks[ws_symbol]
         tick.datetime = datetime.fromtimestamp(data["ts"] / 1000)
-        
+        tick.timestamp = float(data["ts"] / 1000.0)
         bids = data["tick"]["bids"]
         for n in range(5):
             price, volume = bids[n]
@@ -1036,7 +1036,8 @@ class HbdmDataWebsocketApi(HbdmWebsocketApiBase):
         ws_symbol = data["ch"].split(".")[1]
         tick = self.ticks[ws_symbol]
         tick.datetime = datetime.fromtimestamp(data["ts"] / 1000)
-        
+        tick.timestamp = float(data["ts"] / 1000.0)
+
         tick_data = data["tick"]
         tick.open_price = tick_data["open"]
         tick.high_price = tick_data["high"]

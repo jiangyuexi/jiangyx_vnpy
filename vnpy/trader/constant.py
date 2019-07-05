@@ -116,6 +116,7 @@ class Exchange(Enum):
     BITFINEX = "BITFINEX"
 
 
+
 class Currency(Enum):
     """
     Currency. 法币

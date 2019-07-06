@@ -8,6 +8,7 @@ from typing import Any
 from copy import copy
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from gevent import sleep
 
 from vnpy.event import Event, EventEngine
 from ..constant import Direction, Exchange, Offset, OrderType
@@ -555,10 +556,14 @@ class ConnectDialog(QtWidgets.QDialog):
                 field_value = field_type(widget.text())
             setting[field_name] = field_value
 
-        save_json(self.filename, setting)
+        # save_json(self.filename, setting)
 
+        # 从json文件加载配置
+        # settings = load_json(self.filename)
+        # for setting in settings["Keys"]:
+        #     self.main_engine.connect(setting, self.gateway_name)
+        #     sleep(10)
         self.main_engine.connect(setting, self.gateway_name)
-
         self.accept()
 
 

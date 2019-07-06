@@ -1,6 +1,12 @@
+# -*- coding: utf-8 -*-
 """
-火币交易接口
+时间:
+文件名:
+描述:火币交易接口
+
+@author: jiangyuexi1992@qq.com
 """
+
 
 import re
 import urllib
@@ -11,7 +17,9 @@ import hashlib
 import hmac
 from copy import copy
 from datetime import datetime
-from time import time, sleep
+
+from gevent import sleep
+from time import time
 
 from vnpy.event import Event
 from vnpy.api.rest import RestClient, Request
@@ -76,7 +84,7 @@ class HuobiGateway(BaseGateway):
         "代理端口": "",
     }
 
-    exchanges = [Exchange.HUOBI]
+    exchagnes = [Exchange.HUOBI]
 
     def __init__(self, event_engine):
         """Constructor"""
@@ -85,7 +93,6 @@ class HuobiGateway(BaseGateway):
         self.order_manager = LocalOrderManager(self)
         # rest api
         self.rest_api = HuobiRestApi(self)
-        # web socket
         self.trade_ws_api = HuobiTradeWebsocketApi(self)
         self.market_ws_api = HuobiDataWebsocketApi(self)
 
@@ -111,6 +118,7 @@ class HuobiGateway(BaseGateway):
 
     def subscribe(self, req: SubscribeRequest):
         """"""
+        # 等待websocket对象创建成功
         sleep(10)
         self.market_ws_api.subscribe(req)
         self.trade_ws_api.subscribe(req)
@@ -173,11 +181,11 @@ class HuobiRestApi(RestClient):
         """
         Generate HUOBI signature.
         """
-        request.headers = {
-            "User-Agent":
-                "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36"
-        }
+        # request.headers = {
+        #     "User-Agent":
+        #         "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 "
+        #         "(KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36"
+        # }
         params_with_signature = create_signature(
             self.key,
             request.method,
@@ -455,6 +463,7 @@ class HuobiRestApi(RestClient):
         error_msg = data["err-msg"]
 
         self.gateway.write_log(f"{func}请求出错，代码：{error_code}，信息：{error_msg}")
+
         return True
 
 
@@ -642,7 +651,7 @@ class HuobiDataWebsocketApi(HuobiWebsocketApiBase):
         tick = TickData(
             symbol=symbol,
             name=symbol_name_map.get(symbol, ""),
-            timestamp=time(),
+            timestamp=0.0,
             exchange=Exchange.HUOBI,
             datetime=datetime.now(),
             gateway_name=self.gateway_name,

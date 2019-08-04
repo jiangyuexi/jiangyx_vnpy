@@ -10,7 +10,7 @@ import json
 import base64
 import zlib
 from copy import copy
-from datetime import datetime
+from datetime import datetime, timedelta
 from threading import Lock
 from urllib.parse import urlencode
 from gevent import sleep
@@ -24,7 +24,8 @@ from vnpy.trader.constant import (
     Exchange,
     OrderType,
     Product,
-    Status
+    Status,
+    Interval
 )
 from vnpy.trader.gateway import BaseGateway
 from vnpy.trader.object import (
@@ -33,9 +34,11 @@ from vnpy.trader.object import (
     TradeData,
     AccountData,
     ContractData,
+    BarData,
     OrderRequest,
     CancelRequest,
     SubscribeRequest,
+    HistoryRequest
 )
 
 REST_HOST = "https://www.okex.com"
@@ -59,6 +62,18 @@ ORDERTYPE_VT2OKEX = {
     OrderType.MARKET: "market"
 }
 ORDERTYPE_OKEX2VT = {v: k for k, v in ORDERTYPE_VT2OKEX.items()}
+
+INTERVAL_VT2OKEX = {
+    Interval.MINUTE: "60",
+    Interval.HOUR: "3600",
+    Interval.DAILY: "86400",
+}
+
+TIMEDELTA_MAP = {
+    Interval.MINUTE: timedelta(minutes=1),
+    Interval.HOUR: timedelta(hours=1),
+    Interval.DAILY: timedelta(days=1),
+}
 
 
 instruments = set()
@@ -130,6 +145,10 @@ class OkexGateway(BaseGateway):
     def query_position(self):
         """"""
         pass
+
+    def query_history(self, req: HistoryRequest):
+        """"""
+        return self.rest_api.query_history(req)
 
     def close(self):
         """"""
@@ -323,6 +342,7 @@ class OkexRestApi(RestClient):
                 size=1,
                 pricetick=float(instrument_data["tick_size"]),
                 min_volume=float(instrument_data["min_size"]),
+                history_data=True,
                 gateway_name=self.gateway_name
             )
             self.gateway.on_contract(contract)
@@ -454,6 +474,75 @@ class OkexRestApi(RestClient):
             self.exception_detail(exception_type, exception_value, tb, request)
         )
 
+    def query_history(self, req: HistoryRequest):
+        """"""
+        buf = {}
+        end_time = None
+
+        for i in range(10):
+            path = f"/api/spot/v3/instruments/{req.symbol}/candles"
+
+            # Create query params
+            params = {
+                "granularity": INTERVAL_VT2OKEX[req.interval]
+            }
+
+            if end_time:
+                end = datetime.strptime(end_time, "%Y-%m-%dT%H:%M:%S.%fZ")
+                start = end - TIMEDELTA_MAP[req.interval] * 200
+
+                params["start"] = start.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                params["end"] = end.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+            # Get response from server
+            resp = self.request(
+                "GET",
+                path,
+                params=params
+            )
+
+            # Break if request failed with other status code
+            if resp.status_code // 100 != 2:
+                msg = f"获取历史数据失败，状态码：{resp.status_code}，信息：{resp.text}"
+                self.gateway.write_log(msg)
+                break
+            else:
+                data = resp.json()
+                if not data:
+                    msg = f"获取历史数据为空"
+                    break
+
+                for l in data:
+                    ts, o, h, l, c, v = l
+                    dt = datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S.%fZ")
+                    bar = BarData(
+                        symbol=req.symbol,
+                        exchange=req.exchange,
+                        datetime=dt,
+                        interval=req.interval,
+                        volume=float(v),
+                        open_price=float(o),
+                        high_price=float(h),
+                        low_price=float(l),
+                        close_price=float(c),
+                        gateway_name=self.gateway_name
+                    )
+                    buf[bar.datetime] = bar
+
+                begin = data[-1][0]
+                end = data[0][0]
+                msg = f"获取历史数据成功，{req.symbol} - {req.interval.value}，{begin} - {end}"
+                self.gateway.write_log(msg)
+
+                # Update start time
+                end_time = begin
+
+        index = list(buf.keys())
+        index.sort()
+
+        history = [buf[i] for i in index]
+        return history
+
 
 class OkexWebsocketApi(WebsocketClient):
     """"""
@@ -511,13 +600,13 @@ class OkexWebsocketApi(WebsocketClient):
             gateway_name=self.gateway_name,
         )
         self.ticks[req.symbol] = tick
-
+        # 现货 ticker数据  和行情深度
         channel_ticker = f"spot/ticker:{req.symbol}"
         channel_depth = f"spot/depth5:{req.symbol}"
 
         self.callbacks[channel_ticker] = self.on_ticker
         self.callbacks[channel_depth] = self.on_depth
-
+        # websocket 订阅
         req = {
             "op": "subscribe",
             "args": [channel_ticker, channel_depth]
@@ -585,6 +674,7 @@ class OkexWebsocketApi(WebsocketClient):
     def subscribe_topic(self):
         """
         Subscribe to all private topics.
+        订阅所有私有主题
         """
         self.callbacks["spot/ticker"] = self.on_ticker
         self.callbacks["spot/depth5"] = self.on_depth
@@ -649,8 +739,7 @@ class OkexWebsocketApi(WebsocketClient):
         # 24小时成交量，按交易货币统计
         tick.volume = float(d["base_volume_24h"])
         # 年月日时分秒
-        tick.datetime = datetime.strptime(
-            d["timestamp"], "%Y-%m-%dT%H:%M:%S.%fZ")
+        tick.datetime = utc_to_local(d["timestamp"])
         # 时间戳
         tick.timestamp = datetime.timestamp(tick.datetime)
         self.gateway.on_tick(copy(tick))
@@ -675,8 +764,7 @@ class OkexWebsocketApi(WebsocketClient):
                 tick.__setattr__("ask_price_%s" % (n + 1), float(price))
                 tick.__setattr__("ask_volume_%s" % (n + 1), float(volume))
 
-            tick.datetime = datetime.strptime(
-                d["timestamp"], "%Y-%m-%dT%H:%M:%S.%fZ")
+            tick.datetime = utc_to_local(d["timestamp"])
             # 时间戳
             tick.timestamp = datetime.timestamp(tick.datetime)
             self.gateway.on_tick(copy(tick))
@@ -692,7 +780,7 @@ class OkexWebsocketApi(WebsocketClient):
             price=float(d["price"]),
             volume=float(d["size"]),
             traded=float(d["filled_size"]),
-            time=d["timestamp"][11:19],
+            time=utc_to_local(d["timestamp"]).strftime("%H:%M:%S"),
             status=STATUS_OKEX2VT[d["status"]],
             gateway_name=self.gateway_name,
         )
@@ -740,3 +828,9 @@ def get_timestamp():
     now = datetime.utcnow()
     timestamp = now.isoformat("T", "milliseconds")
     return timestamp + "Z"
+
+
+def utc_to_local(timestamp):
+    time = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ")
+    utc_time = time + timedelta(hours=8)
+    return utc_time

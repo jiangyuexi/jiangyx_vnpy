@@ -1,4 +1,3 @@
-# encoding: UTF-8
 """
 Author: qqqlyx
 """
@@ -26,6 +25,7 @@ from vnpy.trader.constant import (
     Product,
     Status,
     Offset,
+    Interval
 )
 from vnpy.trader.gateway import BaseGateway
 from vnpy.trader.object import (
@@ -34,10 +34,12 @@ from vnpy.trader.object import (
     TradeData,
     AccountData,
     ContractData,
+    PositionData,
+    BarData,
     OrderRequest,
     CancelRequest,
     SubscribeRequest,
-    PositionData,
+    HistoryRequest
 )
 REST_HOST = "https://www.okex.com"
 WEBSOCKET_HOST = "wss://real.okex.com:10442/ws/v3"
@@ -62,6 +64,13 @@ TYPE_OKEXF2VT = {
 }
 TYPE_VT2OKEXF = {v: k for k, v in TYPE_OKEXF2VT.items()}
 
+INTERVAL_VT2OKEXF = {
+    Interval.MINUTE: "60",
+    Interval.HOUR: "3600",
+    Interval.DAILY: "86400",
+}
+
+
 instruments = set()
 currencies = set()
 
@@ -69,7 +78,6 @@ currencies = set()
 class OkexfGateway(BaseGateway):
     """
     VN Trader Gateway for OKEX connection.
-    OKEX期货
     """
 
     default_setting = {
@@ -131,6 +139,10 @@ class OkexfGateway(BaseGateway):
     def query_position(self):
         """"""
         pass
+
+    def query_history(self, req: HistoryRequest):
+        """"""
+        return self.rest_api.query_history(req)
 
     def close(self):
         """"""
@@ -217,7 +229,7 @@ class OkexfRestApi(RestClient):
 
         self.init(REST_HOST, proxy_host, proxy_port)
         self.start(session_number)
-        self.gateway.write_log("OKEX 合约  REST API启动成功")
+        self.gateway.write_log("REST API启动成功")
 
         self.query_time()
         self.query_contract()
@@ -339,6 +351,7 @@ class OkexfRestApi(RestClient):
                 product=Product.FUTURES,
                 size=int(instrument_data["trade_increment"]),
                 pricetick=float(instrument_data["tick_size"]),
+                history_data=True,
                 gateway_name=self.gateway_name,
             )
             self.gateway.on_contract(contract)
@@ -347,7 +360,7 @@ class OkexfRestApi(RestClient):
             currencies.add(instrument_data["underlying_index"])
             currencies.add(instrument_data["quote_currency"])
 
-        self.gateway.write_log("OKEX 合约 合约信息查询成功")
+        self.gateway.write_log("合约信息查询成功")
 
         # Start websocket api after instruments data collected
         self.gateway.ws_api.start()
@@ -366,7 +379,7 @@ class OkexfRestApi(RestClient):
                 gateway_name=self.gateway_name,
             )  
             self.gateway.on_account(account)      
-        self.gateway.write_log("OKEX 合约 账户资金查询成功")
+        self.gateway.write_log("账户资金查询成功")
 
     def on_query_position(self, data, request):
         """"""
@@ -374,28 +387,28 @@ class OkexfRestApi(RestClient):
             return
 
         for pos_data in data["holding"][0]:
-            if float(pos_data["long_qty"]) > 0:
+            if int(pos_data["long_qty"]) > 0:
                 pos = PositionData(
                     symbol=pos_data["instrument_id"].upper(),
                     exchange=Exchange.OKEX,
                     direction=Direction.LONG,
-                    volume=pos_data["long_qty"],
+                    volume=int(pos_data["long_qty"]),
                     frozen=float(pos_data["long_qty"]) - float(pos_data["long_avail_qty"]),
-                    price=pos_data["long_avg_cost"],
-                    pnl=pos_data["realised_pnl"],
+                    price=float(pos_data["long_avg_cost"]),
+                    pnl=float(pos_data["realised_pnl"]),
                     gateway_name=self.gateway_name,
                 )
                 self.gateway.on_position(pos)
 
-            if float(pos_data["short_qty"]) > 0:
+            if int(pos_data["short_qty"]) > 0:
                 pos = PositionData(
                     symbol=pos_data["instrument_id"],
                     exchange=Exchange.OKEX,
                     direction=Direction.SHORT,
-                    volume=pos_data["short_qty"],
+                    volume=int(pos_data["short_qty"]),
                     frozen=float(pos_data["short_qty"]) - float(pos_data["short_avail_qty"]),
-                    price=pos_data["short_avg_cost"],
-                    pnl=pos_data["realised_pnl"],
+                    price=float(["short_avg_cost"]),
+                    pnl=float(["realised_pnl"]),
                     gateway_name=self.gateway_name,
                 )
                 self.gateway.on_position(pos)
@@ -424,7 +437,7 @@ class OkexfRestApi(RestClient):
         """"""
         server_time = data["iso"]
         local_time = datetime.utcnow().isoformat()
-        msg = f"OKEX 合约 服务器时间：{server_time}，本机时间：{local_time}"
+        msg = f"服务器时间：{server_time}，本机时间：{local_time}"
         self.gateway.write_log(msg)
 
     def on_send_order_failed(self, status_code: str, request: Request):
@@ -436,7 +449,7 @@ class OkexfRestApi(RestClient):
         order.status = Status.REJECTED
         order.time = datetime.now().strftime("%H:%M:%S.%f")        
         self.gateway.on_order(order)
-        msg = f"OKEX 合约 委托失败，状态码：{status_code}，信息：{request.response.text}"
+        msg = f"委托失败，状态码：{status_code}，信息：{request.response.text}"
         self.gateway.write_log(msg)
 
     def on_send_order_error(
@@ -464,7 +477,7 @@ class OkexfRestApi(RestClient):
             order.status = Status.REJECTED
             self.gateway.on_order(order)
 
-            self.gateway.write_log(f"OKEX 合约 委托失败：{error_msg}")
+            self.gateway.write_log(f"委托失败：{error_msg}")
 
     def on_cancel_order_error(
         self, exception_type: type, exception_value: Exception, tb, request: Request
@@ -496,7 +509,7 @@ class OkexfRestApi(RestClient):
         """
         Callback to handle request failed.
         """
-        msg = f"OKEX 合约 请求失败，状态码：{status_code}，信息：{request.response.text}"
+        msg = f"请求失败，状态码：{status_code}，信息：{request.response.text}"
         self.gateway.write_log(msg)
 
     def on_error(
@@ -505,12 +518,77 @@ class OkexfRestApi(RestClient):
         """
         Callback to handler request exception.
         """
-        msg = f"OKEX 合约 触发异常，状态码：{exception_type}，信息：{exception_value}"
+        msg = f"触发异常，状态码：{exception_type}，信息：{exception_value}"
         self.gateway.write_log(msg)
 
         sys.stderr.write(
             self.exception_detail(exception_type, exception_value, tb, request)
         )
+
+    def query_history(self, req: HistoryRequest):
+        """"""
+        buf = {}
+        end_time = None
+
+        for i in range(10):
+            path = f"/api/futures/v3/instruments/{req.symbol}/candles"
+            
+            # Create query params
+            params = {
+                "granularity": INTERVAL_VT2OKEXF[req.interval]
+            }
+            
+            if end_time:
+                params["end"] = end_time
+
+            # Get response from server
+            resp = self.request(
+                "GET",
+                path,
+                params=params
+            )
+
+            # Break if request failed with other status code
+            if resp.status_code // 100 != 2:
+                msg = f"获取历史数据失败，状态码：{resp.status_code}，信息：{resp.text}"
+                self.gateway.write_log(msg)
+                break
+            else:
+                data = resp.json()
+                if not data:
+                    msg = f"获取历史数据为空"
+                    break
+
+                for l in data:
+                    ts, o, h, l, c, v, _ = l
+                    dt = datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S.%fZ")
+                    bar = BarData(
+                        symbol=req.symbol,
+                        exchange=req.exchange,
+                        datetime=dt,
+                        interval=req.interval,
+                        volume=float(v),
+                        open_price=float(o),
+                        high_price=float(h),
+                        low_price=float(l),
+                        close_price=float(c),
+                        gateway_name=self.gateway_name
+                    )
+                    buf[bar.datetime] = bar
+
+                begin = data[-1][0]
+                end = data[0][0]
+                msg = f"获取历史数据成功，{req.symbol} - {req.interval.value}，{begin} - {end}"
+                self.gateway.write_log(msg)
+
+                # Update start time
+                end_time = begin
+
+        index = list(buf.keys())
+        index.sort()
+        
+        history = [buf[i] for i in index]
+        return history
 
 
 class OkexfWebsocketApi(WebsocketClient):
@@ -568,27 +646,29 @@ class OkexfWebsocketApi(WebsocketClient):
             gateway_name=self.gateway_name,
         )
         self.ticks[req.symbol] = tick
-
+        # 订阅tick数据和市场深度
         channel_ticker = f"futures/ticker:{req.symbol}"
         channel_depth = f"futures/depth5:{req.symbol}"
-
+        # 订阅 1min k线
+        channel_1m_candle = f"futures/candle60s:{req.symbol}"
         self.callbacks[channel_ticker] = self.on_ticker
         self.callbacks[channel_depth] = self.on_depth
+        self.callbacks[channel_1m_candle] = self.on_1m_candle
 
         req = {
             "op": "subscribe",
-            "args": [channel_ticker, channel_depth]
+            "args": [channel_ticker, channel_depth, channel_1m_candle]
         }
         self.send_packet(req)
 
     def on_connected(self):
         """"""
-        self.gateway.write_log("OKEX 合约 Websocket API连接成功")
+        self.gateway.write_log("Websocket API连接成功")
         self.login()
 
     def on_disconnected(self):
         """"""
-        self.gateway.write_log("OKEX 合约 Websocket API连接断开")
+        self.gateway.write_log("Websocket API连接断开")
 
     def on_packet(self, packet: dict):
         """"""
@@ -598,7 +678,7 @@ class OkexfWebsocketApi(WebsocketClient):
                 return
             elif event == "error":
                 msg = packet["message"]
-                self.gateway.write_log(f"OKEX 合约 Websocket API请求异常：{msg}")
+                self.gateway.write_log(f"Websocket API请求异常：{msg}")
             elif event == "login":
                 self.on_login(packet)
         else:
@@ -612,7 +692,7 @@ class OkexfWebsocketApi(WebsocketClient):
 
     def on_error(self, exception_type: type, exception_value: Exception, tb):
         """"""
-        msg = f"OKEX 合约 触发异常，状态码：{exception_type}，信息：{exception_value}"
+        msg = f"触发异常，状态码：{exception_type}，信息：{exception_value}"
         self.gateway.write_log(msg)
 
         sys.stderr.write(self.exception_detail(exception_type, exception_value, tb))
@@ -644,6 +724,7 @@ class OkexfWebsocketApi(WebsocketClient):
         """
         self.callbacks["futures/ticker"] = self.on_ticker
         self.callbacks["futures/depth5"] = self.on_depth
+        self.callbacks["futures/candle60s"] = self.on_1m_candle
         self.callbacks["futures/account"] = self.on_account
         self.callbacks["futures/order"] = self.on_order
         self.callbacks["futures/position"] = self.on_position
@@ -685,15 +766,22 @@ class OkexfWebsocketApi(WebsocketClient):
         }
         self.send_packet(req)
 
+        # Subscribe to BTC/USDT trade for keep connection alive
+        req = {
+            "op": "subscribe",
+            "args": ["spot/trade:EOS-USDT"]
+        }
+        self.send_packet(req)
+
     def on_login(self, data: dict):
         """"""
         success = data.get("success", False)
 
         if success:
-            self.gateway.write_log("OKEX 合约 Websocket API登录成功")
+            self.gateway.write_log("Websocket API登录成功")
             self.subscribe_topic()
         else:
-            self.gateway.write_log("OKEX 合约 Websocket API登录失败")
+            self.gateway.write_log("Websocket API登录失败")
 
     def on_ticker(self, d):
         """"""
@@ -708,30 +796,46 @@ class OkexfWebsocketApi(WebsocketClient):
         tick.volume = float(d["volume_24h"])
         tick.datetime = utc_to_local(d["timestamp"])
 
+        # 时间戳
+        tick.timestamp = datetime.timestamp(tick.datetime)
+
         self.gateway.on_tick(copy(tick))
 
     def on_depth(self, d):
-        """"""
-        for tick_data in d:
-            symbol = d["instrument_id"]
-            tick = self.ticks.get(symbol, None)
-            if not tick:
-                return
+        """
+        市场深度
+        :param d: 
+        :return: 
+        """
+        symbol = d["instrument_id"]
+        print("OKEXF 合约 on_depth", symbol)
+        tick = self.ticks.get(symbol, None)
+        if not tick:
+            return
 
-            bids = d["bids"]
-            asks = d["asks"]
-            for n, buf in enumerate(bids):
-                price, volume, _, __ = buf
-                tick.__setattr__("bid_price_%s" % (n + 1), price)
-                tick.__setattr__("bid_volume_%s" % (n + 1), volume)
+        bids = d["bids"]
+        asks = d["asks"]
+        for n, buf in enumerate(bids):
+            price, volume, _, __ = buf
+            tick.__setattr__("bid_price_%s" % (n + 1), price)
+            tick.__setattr__("bid_volume_%s" % (n + 1), volume)
 
-            for n, buf in enumerate(asks):
-                price, volume, _, __ = buf
-                tick.__setattr__("ask_price_%s" % (n + 1), price)
-                tick.__setattr__("ask_volume_%s" % (n + 1), volume)
+        for n, buf in enumerate(asks):
+            price, volume, _, __ = buf
+            tick.__setattr__("ask_price_%s" % (n + 1), price)
+            tick.__setattr__("ask_volume_%s" % (n + 1), volume)
 
-            tick.datetime = utc_to_local(d["timestamp"])
-            self.gateway.on_tick(copy(tick))
+        tick.datetime = utc_to_local(d["timestamp"])
+        self.gateway.on_tick(copy(tick))
+
+    def on_1m_candle(self, d):
+        """
+        1min   蜡烛图
+         
+        :param d: 
+        :return: 
+        """
+        print("OKEXF 合约 on_1m_candle", d)
 
     def on_order(self, d):
         """"""

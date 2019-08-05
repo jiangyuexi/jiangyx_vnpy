@@ -11,7 +11,7 @@ import hashlib
 import hmac
 from copy import copy
 from datetime import datetime
-from time import time
+from time import time, sleep
 
 from vnpy.event import Event
 from vnpy.api.rest import RestClient, Request
@@ -85,6 +85,7 @@ class HuobiGateway(BaseGateway):
         self.order_manager = LocalOrderManager(self)
         # rest api
         self.rest_api = HuobiRestApi(self)
+        # web socket
         self.trade_ws_api = HuobiTradeWebsocketApi(self)
         self.market_ws_api = HuobiDataWebsocketApi(self)
 
@@ -110,6 +111,7 @@ class HuobiGateway(BaseGateway):
 
     def subscribe(self, req: SubscribeRequest):
         """"""
+        sleep(10)
         self.market_ws_api.subscribe(req)
         self.trade_ws_api.subscribe(req)
 

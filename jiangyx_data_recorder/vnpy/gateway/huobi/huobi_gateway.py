@@ -181,11 +181,11 @@ class HuobiRestApi(RestClient):
         """
         Generate HUOBI signature.
         """
-        # request.headers = {
-        #     "User-Agent":
-        #         "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 "
-        #         "(KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36"
-        # }
+        request.headers = {
+            "User-Agent":
+                "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36"
+        }
         params_with_signature = create_signature(
             self.key,
             request.method,
@@ -375,7 +375,12 @@ class HuobiRestApi(RestClient):
         self.gateway.write_log("委托信息查询成功")
 
     def on_query_contract(self, data, request):  # type: (dict, Request)->None
-        """"""
+        """
+        查询合约
+        :param data: 
+        :param request: 
+        :return: 
+        """
         if self.check_error(data, "查询合约"):
             return
 

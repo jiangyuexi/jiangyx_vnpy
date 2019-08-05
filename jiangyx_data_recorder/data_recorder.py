@@ -39,12 +39,16 @@ def main():
     main_engine = MainEngine(event_engine)
 
     # 添加火币的交互通道
-    main_engine.add_gateway(HuobiGateway)
+    # main_engine.add_gateway(HuobiGateway)
+    sleep(1)
     # main_engine.add_gateway(BitfinexGateway)
     # main_engine.add_gateway(OnetokenGateway)
-    # main_engine.add_gateway(OkexGateway)
-    # main_engine.add_gateway(OkexfGateway)
-    main_engine.add_gateway(HbdmGateway)
+    main_engine.add_gateway(OkexGateway)
+    sleep(1)
+    main_engine.add_gateway(OkexfGateway)
+    sleep(1)
+    # main_engine.add_gateway(HbdmGateway)
+    sleep(1)
 
     # 把 app 保存到 apps 和 engines 里
     main_engine.add_app(DataRecorderApp)
@@ -52,8 +56,9 @@ def main():
     gateway_names = main_engine.get_all_gateway_names()
     for name in gateway_names:
         # 连接火币平台
-        connect = ConnectNoDialog(main_engine=main_engine,gateway_name=name)
+        connect = ConnectNoDialog(main_engine=main_engine, gateway_name=name)
         connect.connect()
+        sleep(5)
     while True:
         # 一天
         sleep(24 * 60 * 60)

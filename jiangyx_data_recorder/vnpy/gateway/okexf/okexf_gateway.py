@@ -568,13 +568,13 @@ class OkexfWebsocketApi(WebsocketClient):
             gateway_name=self.gateway_name,
         )
         self.ticks[req.symbol] = tick
-
+        # 期货 ticker数据  和行情深度
         channel_ticker = f"futures/ticker:{req.symbol}"
         channel_depth = f"futures/depth5:{req.symbol}"
 
         self.callbacks[channel_ticker] = self.on_ticker
         self.callbacks[channel_depth] = self.on_depth
-
+        # websocket 订阅
         req = {
             "op": "subscribe",
             "args": [channel_ticker, channel_depth]

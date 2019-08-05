@@ -45,17 +45,17 @@ def main():
     # main_engine.add_gateway(BitmexGateway)
     # main_engine.add_gateway(TigerGateway)
     # main_engine.add_gateway(OesGateway)
-    # main_engine.add_gateway(OkexfGateway)
+    main_engine.add_gateway(OkexfGateway)
 
 
     # 添加火币的交互通道
     # 从json文件加载配置
-    settings = load_json("connect_huobi.json")
+    # settings = load_json("connect_huobi.json")
     # for setting in settings["Keys"]:
     #     # self.main_engine.connect(setting, self.gateway_name)
     #     # sleep(10)
     #     main_engine.add_gateway(HuobiGateway)
-    main_engine.add_gateway(HuobiGateway)
+    # main_engine.add_gateway(HuobiGateway)
 
 
 
@@ -69,7 +69,7 @@ def main():
     # main_engine.add_app(CtaBacktesterApp)
     # main_engine.add_app(CsvLoaderApp)
     # main_engine.add_app(AlgoTradingApp)
-    # main_engine.add_app(DataRecorderApp)
+    main_engine.add_app(DataRecorderApp)
 
     main_window = MainWindow(main_engine, event_engine)
     main_window.showMaximized()

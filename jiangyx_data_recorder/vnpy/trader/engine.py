@@ -61,6 +61,7 @@ class MainEngine:
         self.engines = {}
         # 保存apps， app里
         self.apps = {}
+        # 保存交易所列表
         self.exchanges = []
 
         self.init_engines()

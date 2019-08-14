@@ -112,12 +112,34 @@ def round_to(value: float, target: float):
     return rounded
 
 
-class BarGenerator:
+class ToString:
+    """
+    打印一个对象, 继承这个类，可以方便的打印一个对象的内容
+    """
+    def getDescription(self):
+        """
+        
+        :return: 
+        """
+        #利用str的format格式化字符串
+        #利用生成器推导式去获取key和self中key对应的值的集合
+        return ",".join("{}={}".format(key,getattr(self,key)) for key in self.__dict__.keys())
+
+    def __str__(self):
+        """
+        
+        :return: 
+        """
+        return "{}->({})".format(self.__class__.__name__,self.getDescription())
+
+
+class BarGenerator(ToString):
     """
     For: 
     1. generating 1 minute bar data from tick data
+    从tick 数据里生成 1分钟bar， （这里并不准确）
     2. generateing x minute bar/x hour bar data from 1 minute data
-
+    从1 分钟bar里生成x分钟/x小时bar
     Notice:
     1. for x minute bar, x must be able to divide 60: 2, 3, 5, 6, 10, 15, 20, 30
     2. for x hour bar, x can be any number
@@ -165,6 +187,7 @@ class BarGenerator:
             new_minute = True
 
         if new_minute:
+            # 如果是新的分钟，则生成新的bar
             self.bar = BarData(
                 symbol=tick.symbol,
                 exchange=tick.exchange,
@@ -177,9 +200,13 @@ class BarGenerator:
                 close_price=tick.last_price,
             )
         else:
+            # 高 price
             self.bar.high_price = max(self.bar.high_price, tick.last_price)
+            # 低 price
             self.bar.low_price = min(self.bar.low_price, tick.last_price)
+            # 收 price
             self.bar.close_price = tick.last_price
+            # 时间
             self.bar.datetime = tick.datetime
 
         if self.last_tick:

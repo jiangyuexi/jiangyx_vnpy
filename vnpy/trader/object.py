@@ -231,9 +231,11 @@ class LogData(BaseData):
 class ContractData(BaseData):
     """
     Contract data contains basic information about each contract traded.
+    Contract数据，包含每一份交易Contract的基本信息。
     """
-
+    # 交易对符号
     symbol: str
+    # 交易所
     exchange: Exchange
     name: str
     product: Product
@@ -259,7 +261,21 @@ class ContractData(BaseData):
 class SubscribeRequest:
     """
     Request sending to specific gateway for subscribing tick data update.
-    接收tick数据
+    请求tick数据
+    """
+
+    symbol: str
+    exchange: Exchange
+
+    def __post_init__(self):
+        """"""
+        self.vt_symbol = f"{self.symbol}.{self.exchange.value}"
+
+
+@dataclass
+class SubscribeRequest1Min:
+    """
+    请求1 min bar数据
     """
 
     symbol: str

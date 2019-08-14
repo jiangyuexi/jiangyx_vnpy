@@ -33,8 +33,8 @@ from .object import (
     LogData,
     OrderRequest,
     SubscribeRequest,
-    HistoryRequest
-)
+    HistoryRequest,
+    SubscribeRequest1Min)
 from .setting import SETTINGS
 from .utility import get_folder_path
 
@@ -182,6 +182,15 @@ class MainEngine:
         gateway = self.get_gateway(gateway_name)
         if gateway:
             gateway.subscribe(req)
+
+    def subscribe1min(self, req: SubscribeRequest1Min, gateway_name: str):
+        """
+        Subscribe 1 min bar data update of a specific gateway.
+        从指定的gateway 订阅1 min bar数据
+        """
+        gateway = self.get_gateway(gateway_name)
+        if gateway:
+            gateway.subscribe1min(req)
 
     def send_order(self, req: OrderRequest, gateway_name: str):
         """
@@ -516,6 +525,7 @@ class OmsEngine(BaseEngine):
 class EmailEngine(BaseEngine):
     """
     Provides email sending function for VN Trader.
+    提供邮箱引擎
     """
 
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine):

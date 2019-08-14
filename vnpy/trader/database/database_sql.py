@@ -1,5 +1,7 @@
 """"""
 from datetime import datetime
+import datetime
+import time
 from typing import List, Optional, Sequence, Type
 
 from peewee import (
@@ -152,45 +154,56 @@ def init_models(db: Database, driver: Driver):
         Index is defined unique with (datetime, symbol)
         数据库里的tick数据结构
         """
-
+        # id
         id = AutoField()
-
+        # 交易对
         symbol: str = CharField()
+        # 交易所
         exchange: str = CharField()
-
+        # 时间戳
         timestamp: float = DoubleField()
+        # 日期时间
         datetime: datetime = DateTimeField()
-
+        # 交易对 ？？？
         name: str = CharField()
+        # 按交易货币统计
         volume: float = FloatField()
+        # 最新成交价
         last_price: float = FloatField()
+        # 最新成交量
         last_volume: float = FloatField()
+        # 现价 高
         limit_up: float = FloatField()
+        # 现价 低
         limit_down: float = FloatField()
-
+        # 开
         open_price: float = FloatField()
+        # 高
         high_price: float = FloatField()
+        # 低
         low_price: float = FloatField()
+        # 前一个收盘价
         pre_close: float = FloatField()
 
+        # 买
         bid_price_1: float = FloatField()
         bid_price_2: float = FloatField(null=True)
         bid_price_3: float = FloatField(null=True)
         bid_price_4: float = FloatField(null=True)
         bid_price_5: float = FloatField(null=True)
-
+        # 卖
         ask_price_1: float = FloatField()
         ask_price_2: float = FloatField(null=True)
         ask_price_3: float = FloatField(null=True)
         ask_price_4: float = FloatField(null=True)
         ask_price_5: float = FloatField(null=True)
-
+        # 买 量
         bid_volume_1: float = FloatField()
         bid_volume_2: float = FloatField(null=True)
         bid_volume_3: float = FloatField(null=True)
         bid_volume_4: float = FloatField(null=True)
         bid_volume_5: float = FloatField(null=True)
-
+        # 卖 的量
         ask_volume_1: float = FloatField()
         ask_volume_2: float = FloatField(null=True)
         ask_volume_3: float = FloatField(null=True)
@@ -199,7 +212,6 @@ def init_models(db: Database, driver: Driver):
 
         class Meta:
             database = db
-
             indexes = ((("symbol", "exchange", "timestamp", "datetime"), True),)
 
         @staticmethod
@@ -326,9 +338,13 @@ def init_models(db: Database, driver: Driver):
 
     db.connect()
     # 如何在这里指定数据库表名， 或者根据日期新建数据库，每个数据库的表一致。
+    DbBarData._meta.table_name = "DbBarData" + str(datetime.date.today())
+    DbTickData._meta.table_name = "DbTickData" + str(datetime.date.today())
 
-    # DbBarData._meta.table_name = "ewrwrertewt"
-    # DbTickData._meta.table_name = "tickdsfdghdhgj"
+    # DbBarData._meta.table_name = "DbBarData" + str(datetime.date.today()) + \
+    #                              str(time.strftime('%H', time.localtime()))
+    # DbTickData._meta.table_name = "DbTickData" + str(datetime.date.today()) + \
+    #                               str(time.strftime('%H', time.localtime()))
     db.create_tables([DbBarData, DbTickData])
     return DbBarData, DbTickData
 

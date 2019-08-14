@@ -26,6 +26,7 @@ from vnpy.trader.constant import (
     Product,
     Status,
     Offset,
+    Interval
 )
 from vnpy.trader.gateway import BaseGateway
 from vnpy.trader.object import (
@@ -34,10 +35,12 @@ from vnpy.trader.object import (
     TradeData,
     AccountData,
     ContractData,
+    PositionData,
+    BarData,
     OrderRequest,
     CancelRequest,
     SubscribeRequest,
-    PositionData,
+    HistoryRequest
 )
 REST_HOST = "https://www.okex.com"
 WEBSOCKET_HOST = "wss://real.okex.com:10442/ws/v3"
@@ -61,6 +64,13 @@ TYPE_OKEXF2VT = {
     "4": (Offset.CLOSE, Direction.LONG),
 }
 TYPE_VT2OKEXF = {v: k for k, v in TYPE_OKEXF2VT.items()}
+
+INTERVAL_VT2OKEXF = {
+    Interval.MINUTE: "60",
+    Interval.HOUR: "3600",
+    Interval.DAILY: "86400",
+}
+
 
 instruments = set()
 currencies = set()
@@ -130,6 +140,10 @@ class OkexfGateway(BaseGateway):
     def query_position(self):
         """"""
         pass
+
+    def query_history(self, req: HistoryRequest):
+        """"""
+        return self.rest_api.query_history(req)
 
     def close(self):
         """"""
@@ -338,6 +352,7 @@ class OkexfRestApi(RestClient):
                 product=Product.FUTURES,
                 size=int(instrument_data["trade_increment"]),
                 pricetick=float(instrument_data["tick_size"]),
+                history_data=True,
                 gateway_name=self.gateway_name,
             )
             self.gateway.on_contract(contract)
@@ -373,28 +388,28 @@ class OkexfRestApi(RestClient):
             return
 
         for pos_data in data["holding"][0]:
-            if float(pos_data["long_qty"]) > 0:
+            if int(pos_data["long_qty"]) > 0:
                 pos = PositionData(
                     symbol=pos_data["instrument_id"].upper(),
                     exchange=Exchange.OKEX,
                     direction=Direction.LONG,
-                    volume=pos_data["long_qty"],
+                    volume=int(pos_data["long_qty"]),
                     frozen=float(pos_data["long_qty"]) - float(pos_data["long_avail_qty"]),
-                    price=pos_data["long_avg_cost"],
-                    pnl=pos_data["realised_pnl"],
+                    price=float(pos_data["long_avg_cost"]),
+                    pnl=float(pos_data["realised_pnl"]),
                     gateway_name=self.gateway_name,
                 )
                 self.gateway.on_position(pos)
 
-            if float(pos_data["short_qty"]) > 0:
+            if int(pos_data["short_qty"]) > 0:
                 pos = PositionData(
                     symbol=pos_data["instrument_id"],
                     exchange=Exchange.OKEX,
                     direction=Direction.SHORT,
-                    volume=pos_data["short_qty"],
+                    volume=int(pos_data["short_qty"]),
                     frozen=float(pos_data["short_qty"]) - float(pos_data["short_avail_qty"]),
-                    price=pos_data["short_avg_cost"],
-                    pnl=pos_data["realised_pnl"],
+                    price=float(["short_avg_cost"]),
+                    pnl=float(["realised_pnl"]),
                     gateway_name=self.gateway_name,
                 )
                 self.gateway.on_position(pos)
@@ -511,6 +526,71 @@ class OkexfRestApi(RestClient):
             self.exception_detail(exception_type, exception_value, tb, request)
         )
 
+    def query_history(self, req: HistoryRequest):
+        """"""
+        buf = {}
+        end_time = None
+
+        for i in range(10):
+            path = f"/api/futures/v3/instruments/{req.symbol}/candles"
+            
+            # Create query params
+            params = {
+                "granularity": INTERVAL_VT2OKEXF[req.interval]
+            }
+            
+            if end_time:
+                params["end"] = end_time
+
+            # Get response from server
+            resp = self.request(
+                "GET",
+                path,
+                params=params
+            )
+
+            # Break if request failed with other status code
+            if resp.status_code // 100 != 2:
+                msg = f"获取历史数据失败，状态码：{resp.status_code}，信息：{resp.text}"
+                self.gateway.write_log(msg)
+                break
+            else:
+                data = resp.json()
+                if not data:
+                    msg = f"获取历史数据为空"
+                    break
+
+                for l in data:
+                    ts, o, h, l, c, v, _ = l
+                    dt = datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S.%fZ")
+                    bar = BarData(
+                        symbol=req.symbol,
+                        exchange=req.exchange,
+                        datetime=dt,
+                        interval=req.interval,
+                        volume=float(v),
+                        open_price=float(o),
+                        high_price=float(h),
+                        low_price=float(l),
+                        close_price=float(c),
+                        gateway_name=self.gateway_name
+                    )
+                    buf[bar.datetime] = bar
+
+                begin = data[-1][0]
+                end = data[0][0]
+                msg = f"获取历史数据成功，{req.symbol} - {req.interval.value}，{begin} - {end}"
+                self.gateway.write_log(msg)
+
+                # Update start time
+                end_time = begin
+
+        index = list(buf.keys())
+        index.sort()
+        
+        history = [buf[i] for i in index]
+        return history
+
 
 class OkexfWebsocketApi(WebsocketClient):
     """"""
@@ -562,20 +642,23 @@ class OkexfWebsocketApi(WebsocketClient):
             symbol=req.symbol,
             exchange=req.exchange,
             name=req.symbol,
+            timestamp=0.0,
             datetime=datetime.now(),
             gateway_name=self.gateway_name,
         )
         self.ticks[req.symbol] = tick
-
+        # 订阅tick数据和市场深度
         channel_ticker = f"futures/ticker:{req.symbol}"
         channel_depth = f"futures/depth5:{req.symbol}"
-
+        # 订阅 1min k线
+        channel_1m_candle = f"futures/candle60s:{req.symbol}"
         self.callbacks[channel_ticker] = self.on_ticker
         self.callbacks[channel_depth] = self.on_depth
+        self.callbacks[channel_1m_candle] = self.on_1m_candle
 
         req = {
             "op": "subscribe",
-            "args": [channel_ticker, channel_depth]
+            "args": [channel_ticker, channel_depth, channel_1m_candle]
         }
         self.send_packet(req)
 
@@ -642,6 +725,7 @@ class OkexfWebsocketApi(WebsocketClient):
         """
         self.callbacks["futures/ticker"] = self.on_ticker
         self.callbacks["futures/depth5"] = self.on_depth
+        self.callbacks["futures/candle60s"] = self.on_1m_candle
         self.callbacks["futures/account"] = self.on_account
         self.callbacks["futures/order"] = self.on_order
         self.callbacks["futures/position"] = self.on_position
@@ -683,6 +767,13 @@ class OkexfWebsocketApi(WebsocketClient):
         }
         self.send_packet(req)
 
+        # Subscribe to BTC/USDT trade for keep connection alive
+        req = {
+            "op": "subscribe",
+            "args": ["spot/trade:EOS-USDT"]
+        }
+        self.send_packet(req)
+
     def on_login(self, data: dict):
         """"""
         success = data.get("success", False)
@@ -706,30 +797,46 @@ class OkexfWebsocketApi(WebsocketClient):
         tick.volume = float(d["volume_24h"])
         tick.datetime = utc_to_local(d["timestamp"])
 
+        # 时间戳
+        tick.timestamp = datetime.timestamp(tick.datetime)
+
         self.gateway.on_tick(copy(tick))
 
     def on_depth(self, d):
-        """"""
-        for tick_data in d:
-            symbol = d["instrument_id"]
-            tick = self.ticks.get(symbol, None)
-            if not tick:
-                return
+        """
+        市场深度
+        :param d: 
+        :return: 
+        """
+        symbol = d["instrument_id"]
+        print("OKEXF 合约 on_depth", symbol)
+        tick = self.ticks.get(symbol, None)
+        if not tick:
+            return
 
-            bids = d["bids"]
-            asks = d["asks"]
-            for n, buf in enumerate(bids):
-                price, volume, _, __ = buf
-                tick.__setattr__("bid_price_%s" % (n + 1), price)
-                tick.__setattr__("bid_volume_%s" % (n + 1), volume)
+        bids = d["bids"]
+        asks = d["asks"]
+        for n, buf in enumerate(bids):
+            price, volume, _, __ = buf
+            tick.__setattr__("bid_price_%s" % (n + 1), price)
+            tick.__setattr__("bid_volume_%s" % (n + 1), volume)
 
-            for n, buf in enumerate(asks):
-                price, volume, _, __ = buf
-                tick.__setattr__("ask_price_%s" % (n + 1), price)
-                tick.__setattr__("ask_volume_%s" % (n + 1), volume)
+        for n, buf in enumerate(asks):
+            price, volume, _, __ = buf
+            tick.__setattr__("ask_price_%s" % (n + 1), price)
+            tick.__setattr__("ask_volume_%s" % (n + 1), volume)
 
-            tick.datetime = utc_to_local(d["timestamp"])
-            self.gateway.on_tick(copy(tick))
+        tick.datetime = utc_to_local(d["timestamp"])
+        self.gateway.on_tick(copy(tick))
+
+    def on_1m_candle(self, d):
+        """
+        1min   蜡烛图
+         
+        :param d: 
+        :return: 
+        """
+        print("OKEXF 合约 on_1m_candle", d)
 
     def on_order(self, d):
         """"""

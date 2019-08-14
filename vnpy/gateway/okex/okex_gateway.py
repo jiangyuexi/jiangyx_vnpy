@@ -10,9 +10,10 @@ import json
 import base64
 import zlib
 from copy import copy
-from datetime import datetime
+from datetime import datetime, timedelta
 from threading import Lock
 from urllib.parse import urlencode
+from gevent import sleep
 
 from requests import ConnectionError
 
@@ -23,7 +24,8 @@ from vnpy.trader.constant import (
     Exchange,
     OrderType,
     Product,
-    Status
+    Status,
+    Interval
 )
 from vnpy.trader.gateway import BaseGateway
 from vnpy.trader.object import (
@@ -32,9 +34,11 @@ from vnpy.trader.object import (
     TradeData,
     AccountData,
     ContractData,
+    BarData,
     OrderRequest,
     CancelRequest,
     SubscribeRequest,
+    HistoryRequest
 )
 
 REST_HOST = "https://www.okex.com"
@@ -59,6 +63,18 @@ ORDERTYPE_VT2OKEX = {
 }
 ORDERTYPE_OKEX2VT = {v: k for k, v in ORDERTYPE_VT2OKEX.items()}
 
+INTERVAL_VT2OKEX = {
+    Interval.MINUTE: "60",
+    Interval.HOUR: "3600",
+    Interval.DAILY: "86400",
+}
+
+TIMEDELTA_MAP = {
+    Interval.MINUTE: timedelta(minutes=1),
+    Interval.HOUR: timedelta(hours=1),
+    Interval.DAILY: timedelta(days=1),
+}
+
 
 instruments = set()
 currencies = set()
@@ -67,6 +83,7 @@ currencies = set()
 class OkexGateway(BaseGateway):
     """
     VN Trader Gateway for OKEX connection.
+    OKEX 现货
     """
 
     default_setting = {
@@ -109,6 +126,8 @@ class OkexGateway(BaseGateway):
 
     def subscribe(self, req: SubscribeRequest):
         """"""
+        # 等待websocket对象创建成功
+        sleep(10)
         self.ws_api.subscribe(req)
 
     def send_order(self, req: OrderRequest):
@@ -126,6 +145,10 @@ class OkexGateway(BaseGateway):
     def query_position(self):
         """"""
         pass
+
+    def query_history(self, req: HistoryRequest):
+        """"""
+        return self.rest_api.query_history(req)
 
     def close(self):
         """"""
@@ -210,7 +233,7 @@ class OkexRestApi(RestClient):
 
         self.init(REST_HOST, proxy_host, proxy_port)
         self.start(session_number)
-        self.gateway.write_log("REST API启动成功")
+        self.gateway.write_log("OKEX REST API启动成功")
 
         self.query_time()
         self.query_contract()
@@ -319,6 +342,7 @@ class OkexRestApi(RestClient):
                 size=1,
                 pricetick=float(instrument_data["tick_size"]),
                 min_volume=float(instrument_data["min_size"]),
+                history_data=True,
                 gateway_name=self.gateway_name
             )
             self.gateway.on_contract(contract)
@@ -327,7 +351,7 @@ class OkexRestApi(RestClient):
             currencies.add(instrument_data["base_currency"])
             currencies.add(instrument_data["quote_currency"])
 
-        self.gateway.write_log("合约信息查询成功")
+        self.gateway.write_log("OKEX 合约信息查询成功")
 
         # Start websocket api after instruments data collected
         self.gateway.ws_api.start()
@@ -343,7 +367,7 @@ class OkexRestApi(RestClient):
             )
             self.gateway.on_account(account)
 
-        self.gateway.write_log("账户资金查询成功")
+        self.gateway.write_log("OKEX 账户资金查询成功")
 
     def on_query_order(self, data, request):
         """"""
@@ -363,13 +387,13 @@ class OkexRestApi(RestClient):
             )
             self.gateway.on_order(order)
 
-        self.gateway.write_log("委托信息查询成功")
+        self.gateway.write_log("OKEX 委托信息查询成功")
 
     def on_query_time(self, data, request):
         """"""
         server_time = data["iso"]
         local_time = datetime.utcnow().isoformat()
-        msg = f"服务器时间：{server_time}，本机时间：{local_time}"
+        msg = f"OKEX 服务器时间：{server_time}，本机时间：{local_time}"
         self.gateway.write_log(msg)
 
     def on_send_order_failed(self, status_code: str, request: Request):
@@ -380,7 +404,7 @@ class OkexRestApi(RestClient):
         order.status = Status.REJECTED
         self.gateway.on_order(order)
 
-        msg = f"委托失败，状态码：{status_code}，信息：{request.response.text}"
+        msg = f"OKEX 委托失败，状态码：{status_code}，信息：{request.response.text}"
         self.gateway.write_log(msg)
 
     def on_send_order_error(
@@ -406,7 +430,7 @@ class OkexRestApi(RestClient):
             order.status = Status.REJECTED
             self.gateway.on_order(order)
 
-            self.gateway.write_log(f"委托失败：{error_msg}")
+            self.gateway.write_log(f"OKEX 委托失败：{error_msg}")
 
     def on_cancel_order_error(
         self, exception_type: type, exception_value: Exception, tb, request: Request
@@ -434,7 +458,7 @@ class OkexRestApi(RestClient):
         """
         Callback to handle request failed.
         """
-        msg = f"请求失败，状态码：{status_code}，信息：{request.response.text}"
+        msg = f"OKEX 请求失败，状态码：{status_code}，信息：{request.response.text}"
         self.gateway.write_log(msg)
 
     def on_error(
@@ -443,12 +467,81 @@ class OkexRestApi(RestClient):
         """
         Callback to handler request exception.
         """
-        msg = f"触发异常，状态码：{exception_type}，信息：{exception_value}"
+        msg = f"OKEX 触发异常，状态码：{exception_type}，信息：{exception_value}"
         self.gateway.write_log(msg)
 
         sys.stderr.write(
             self.exception_detail(exception_type, exception_value, tb, request)
         )
+
+    def query_history(self, req: HistoryRequest):
+        """"""
+        buf = {}
+        end_time = None
+
+        for i in range(10):
+            path = f"/api/spot/v3/instruments/{req.symbol}/candles"
+
+            # Create query params
+            params = {
+                "granularity": INTERVAL_VT2OKEX[req.interval]
+            }
+
+            if end_time:
+                end = datetime.strptime(end_time, "%Y-%m-%dT%H:%M:%S.%fZ")
+                start = end - TIMEDELTA_MAP[req.interval] * 200
+
+                params["start"] = start.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                params["end"] = end.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+            # Get response from server
+            resp = self.request(
+                "GET",
+                path,
+                params=params
+            )
+
+            # Break if request failed with other status code
+            if resp.status_code // 100 != 2:
+                msg = f"获取历史数据失败，状态码：{resp.status_code}，信息：{resp.text}"
+                self.gateway.write_log(msg)
+                break
+            else:
+                data = resp.json()
+                if not data:
+                    msg = f"获取历史数据为空"
+                    break
+
+                for l in data:
+                    ts, o, h, l, c, v = l
+                    dt = datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S.%fZ")
+                    bar = BarData(
+                        symbol=req.symbol,
+                        exchange=req.exchange,
+                        datetime=dt,
+                        interval=req.interval,
+                        volume=float(v),
+                        open_price=float(o),
+                        high_price=float(h),
+                        low_price=float(l),
+                        close_price=float(c),
+                        gateway_name=self.gateway_name
+                    )
+                    buf[bar.datetime] = bar
+
+                begin = data[-1][0]
+                end = data[0][0]
+                msg = f"获取历史数据成功，{req.symbol} - {req.interval.value}，{begin} - {end}"
+                self.gateway.write_log(msg)
+
+                # Update start time
+                end_time = begin
+
+        index = list(buf.keys())
+        index.sort()
+
+        history = [buf[i] for i in index]
+        return history
 
 
 class OkexWebsocketApi(WebsocketClient):
@@ -502,17 +595,18 @@ class OkexWebsocketApi(WebsocketClient):
             symbol=req.symbol,
             exchange=req.exchange,
             name=req.symbol,
+            timestamp=0.0,
             datetime=datetime.now(),
             gateway_name=self.gateway_name,
         )
         self.ticks[req.symbol] = tick
-
+        # 现货 ticker数据  和行情深度
         channel_ticker = f"spot/ticker:{req.symbol}"
         channel_depth = f"spot/depth5:{req.symbol}"
 
         self.callbacks[channel_ticker] = self.on_ticker
         self.callbacks[channel_depth] = self.on_depth
-
+        # websocket 订阅
         req = {
             "op": "subscribe",
             "args": [channel_ticker, channel_depth]
@@ -521,12 +615,12 @@ class OkexWebsocketApi(WebsocketClient):
 
     def on_connected(self):
         """"""
-        self.gateway.write_log("Websocket API连接成功")
+        self.gateway.write_log("OKEX Websocket API连接成功")
         self.login()
 
     def on_disconnected(self):
         """"""
-        self.gateway.write_log("Websocket API连接断开")
+        self.gateway.write_log("OKEX Websocket API连接断开")
 
     def on_packet(self, packet: dict):
         """"""
@@ -536,7 +630,7 @@ class OkexWebsocketApi(WebsocketClient):
                 return
             elif event == "error":
                 msg = packet["message"]
-                self.gateway.write_log(f"Websocket API请求异常：{msg}")
+                self.gateway.write_log(f"OKEX  Websocket API请求异常：{msg}")
             elif event == "login":
                 self.on_login(packet)
         else:
@@ -550,7 +644,7 @@ class OkexWebsocketApi(WebsocketClient):
 
     def on_error(self, exception_type: type, exception_value: Exception, tb):
         """"""
-        msg = f"触发异常，状态码：{exception_type}，信息：{exception_value}"
+        msg = f"OKEX 触发异常，状态码：{exception_type}，信息：{exception_value}"
         self.gateway.write_log(msg)
 
         sys.stderr.write(self.exception_detail(
@@ -580,6 +674,7 @@ class OkexWebsocketApi(WebsocketClient):
     def subscribe_topic(self):
         """
         Subscribe to all private topics.
+        订阅所有私有主题
         """
         self.callbacks["spot/ticker"] = self.on_ticker
         self.callbacks["spot/depth5"] = self.on_depth
@@ -622,10 +717,10 @@ class OkexWebsocketApi(WebsocketClient):
         success = data.get("success", False)
 
         if success:
-            self.gateway.write_log("Websocket API登录成功")
+            self.gateway.write_log("OKEX Websocket API登录成功")
             self.subscribe_topic()
         else:
-            self.gateway.write_log("Websocket API登录失败")
+            self.gateway.write_log("OKEX Websocket API登录失败")
 
     def on_ticker(self, d):
         """"""
@@ -633,14 +728,20 @@ class OkexWebsocketApi(WebsocketClient):
         tick = self.ticks.get(symbol, None)
         if not tick:
             return
-
+        # 最新成交价
         tick.last_price = float(d["last"])
-        tick.open = float(d["open_24h"])
-        tick.high = float(d["high_24h"])
-        tick.low = float(d["low_24h"])
+        # 	24小时开盘价
+        tick.open_price = float(d["open_24h"])
+        # 24小时最高价
+        tick.high_price = float(d["high_24h"])
+        # 24小时最低价
+        tick.low_price = float(d["low_24h"])
+        # 24小时成交量，按交易货币统计
         tick.volume = float(d["base_volume_24h"])
-        tick.datetime = datetime.strptime(
-            d["timestamp"], "%Y-%m-%dT%H:%M:%S.%fZ")
+        # 年月日时分秒
+        tick.datetime = utc_to_local(d["timestamp"])
+        # 时间戳
+        tick.timestamp = datetime.timestamp(tick.datetime)
         self.gateway.on_tick(copy(tick))
 
     def on_depth(self, d):
@@ -663,8 +764,9 @@ class OkexWebsocketApi(WebsocketClient):
                 tick.__setattr__("ask_price_%s" % (n + 1), float(price))
                 tick.__setattr__("ask_volume_%s" % (n + 1), float(volume))
 
-            tick.datetime = datetime.strptime(
-                d["timestamp"], "%Y-%m-%dT%H:%M:%S.%fZ")
+            tick.datetime = utc_to_local(d["timestamp"])
+            # 时间戳
+            tick.timestamp = datetime.timestamp(tick.datetime)
             self.gateway.on_tick(copy(tick))
 
     def on_order(self, d):
@@ -678,7 +780,7 @@ class OkexWebsocketApi(WebsocketClient):
             price=float(d["price"]),
             volume=float(d["size"]),
             traded=float(d["filled_size"]),
-            time=d["timestamp"][11:19],
+            time=utc_to_local(d["timestamp"]).strftime("%H:%M:%S"),
             status=STATUS_OKEX2VT[d["status"]],
             gateway_name=self.gateway_name,
         )
@@ -726,3 +828,9 @@ def get_timestamp():
     now = datetime.utcnow()
     timestamp = now.isoformat("T", "milliseconds")
     return timestamp + "Z"
+
+
+def utc_to_local(timestamp):
+    time = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ")
+    utc_time = time + timedelta(hours=8)
+    return utc_time

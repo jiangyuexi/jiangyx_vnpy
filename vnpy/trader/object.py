@@ -341,6 +341,7 @@ class CancelRequest:
 class HistoryRequest:
     """
     Request sending to specific gateway for querying history data.
+    向指定的gateway，请求历史数据
     """
 
     symbol: str

@@ -33,7 +33,7 @@ from .object import (
     CancelRequest,
     SubscribeRequest,
     HistoryRequest,
-    BarData)
+    BarData, SubscribeRequest1Min)
 
 
 class BaseGateway(ABC):
@@ -195,6 +195,13 @@ class BaseGateway(ABC):
     def subscribe(self, req: SubscribeRequest):
         """
         Subscribe tick data update.
+        """
+        pass
+
+    @abstractmethod
+    def subscribe1min(self, req: SubscribeRequest1Min):
+        """
+        Subscribe 1min bar data update.
         """
         pass
 

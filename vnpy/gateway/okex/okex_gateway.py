@@ -25,6 +25,7 @@ from vnpy.trader.constant import (
     OrderType,
     Product,
     Status,
+    Offset,
     Interval
 )
 from vnpy.trader.gateway import BaseGateway
@@ -34,6 +35,7 @@ from vnpy.trader.object import (
     TradeData,
     AccountData,
     ContractData,
+    PositionData,
     BarData,
     OrderRequest,
     CancelRequest,
@@ -127,8 +129,14 @@ class OkexGateway(BaseGateway):
     def subscribe(self, req: SubscribeRequest):
         """"""
         # 等待websocket对象创建成功
-        sleep(10)
+        sleep(5)
         self.ws_api.subscribe(req)
+
+    def subscribe1min(self, req: SubscribeRequest1Min):
+        """"""
+        # 等待websocket对象创建成功
+        sleep(5)
+        self.ws_api.subscribe1min(req)
 
     def send_order(self, req: OrderRequest):
         """"""
@@ -626,7 +634,8 @@ class OkexWebsocketApi(WebsocketClient):
             symbol=req.symbol,
             exchange=req.exchange,
             datetime=datetime.now(),
-            interval=Interval.MINUTE
+            interval=Interval.MINUTE,
+            gateway_name=self.gateway_name,
         )
 
         self.bars[req.symbol] = min1bar
@@ -807,19 +816,18 @@ class OkexWebsocketApi(WebsocketClient):
         bar = self.bars.get(symbol, None)
         if not bar:
             return
-        # 成交量
-        bar.volume = float(d["volume"])
-        # 开盘价
-        bar.open_price = float(d["open"])
-        # 最高价
-        bar.high_price = float(d["high"])
-        # 最低价
-        bar.low_price = float(d["low"])
-        # 收盘价
-        bar.close_price = float(d["close"])
         # 日期时间
-        bar.datetime = utc_to_local(d["timestamp"])
-
+        bar.datetime = utc_to_local(d["candle"][0])
+        # 开盘价
+        bar.open_price = float(d["candle"][1])
+        # 最高价
+        bar.high_price = float(d["candle"][2])
+        # 最低价
+        bar.low_price = float(d["candle"][3])
+        # 收盘价
+        bar.close_price = float(d["candle"][4])
+        # 成交量
+        bar.volume = float(d["candle"][5])
         self.gateway.on_bar(copy(bar))
 
     def on_order(self, d):

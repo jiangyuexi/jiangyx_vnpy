@@ -61,8 +61,8 @@ def main():
 
     # main_engine.add_gateway(BitfinexGateway)
     # main_engine.add_gateway(OnetokenGateway)
-    main_engine.add_gateway(OkexGateway)
-    main_engine.add_gateway(HbdmGateway)
+    # main_engine.add_gateway(OkexGateway)
+    # main_engine.add_gateway(HbdmGateway)
 
     # 把 app 保存到 apps 和 engines 里
     # main_engine.add_app(CtaStrategyApp)

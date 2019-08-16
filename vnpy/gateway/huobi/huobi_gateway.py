@@ -35,7 +35,7 @@ from vnpy.trader.object import (
     SubscribeRequest,
     SubscribeRequest1Min, BarData)
 from vnpy.trader.event import EVENT_TIMER
-
+from vnpy.trader.utility import TimeUtils
 
 REST_HOST = "https://api.huobipro.com"
 WEBSOCKET_DATA_HOST = "wss://api.huobi.pro/ws"       # Market Data
@@ -147,7 +147,11 @@ class HuobiGateway(BaseGateway):
         self.market_ws_api.stop()
 
     def process_timer_event(self, event: Event):
-        """"""
+        """
+        定时器回调函数
+        :param event: 
+        :return: 
+        """
         self.count += 1
         if self.count < 3:
             return
@@ -155,7 +159,10 @@ class HuobiGateway(BaseGateway):
         self.query_account()
 
     def init_query(self):
-        """"""
+        """
+        注册定时器回调函数
+        :return: 
+        """
         self.count = 0
         self.event_engine.register(EVENT_TIMER, self.process_timer_event)
 
@@ -517,7 +524,11 @@ class HuobiWebsocketApiBase(WebsocketClient):
         return json.loads(zlib.decompress(data, 31)) 
 
     def on_packet(self, packet):
-        """"""
+        """
+        回调函数，从服务器接收数据
+        :param packet: 
+        :return: 
+        """
         if "ping" in packet:
             req = {"pong": packet["ping"]}
             self.send_packet(req)
@@ -792,12 +803,18 @@ class HuobiDataWebsocketApi(HuobiWebsocketApiBase):
 
         tick_data = data["tick"]
 
+        # 如果 1min 快接结束了 才存入数据库
+        tu = TimeUtils()
+        secend = tu.get_secend(data["ts"] // 1000)
+        if 5 < secend < 53:
+            return
+        # print(secend)
         # 日期时间
         # 转换成localtime
         time_local = localtime(data["ts"] // 1000)
         # 转换成新的时间格式(2016-05-05 20:28:54)
         bar.datetime = strftime("%Y-%m-%d %H:%M:00", time_local)
-        print(bar.datetime)
+        # print(bar.datetime)
         # 开盘价
         bar.open_price = float(tick_data["open"])
         # 最高价

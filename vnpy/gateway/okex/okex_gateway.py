@@ -816,8 +816,10 @@ class OkexWebsocketApi(WebsocketClient):
         bar = self.bars.get(symbol, None)
         if not bar:
             return
+
         # 日期时间
         bar.datetime = utc_to_local(d["candle"][0])
+        print(d["candle"][0])
         print(bar.datetime)
         # 开盘价
         bar.open_price = float(d["candle"][1])

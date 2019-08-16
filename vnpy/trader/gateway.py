@@ -285,6 +285,7 @@ class BaseGateway(ABC):
 class LocalOrderManager:
     """
     Management tool to support use local order id for trading.
+    管理工具，支持使用本地订单id进行交易。
     """
 
     def __init__(self, gateway: BaseGateway):

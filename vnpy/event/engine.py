@@ -8,6 +8,7 @@ from threading import Thread
 from time import sleep
 from typing import Any, Callable
 
+# 定时器事件
 EVENT_TIMER = "eTimer"
 
 
@@ -67,7 +68,7 @@ class EventEngine:
     def _run(self):
         """
         Get event from queue and then process it.
-        从队列获取事件，并且处理它。
+        从队列获取事件，并且处理它。 事件引擎
         """
         while self._active:
             try:
@@ -82,6 +83,7 @@ class EventEngine:
         to this type. 
         Then distrubute event to those general handlers which listens
         to all types.
+        根据事件类型和事件内容，调用相应的回调函数，来进行处理
         """
         if event.type in self._handlers:
             [handler(event) for handler in self._handlers[event.type]]

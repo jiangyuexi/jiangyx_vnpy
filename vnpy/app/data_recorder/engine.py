@@ -138,7 +138,7 @@ class RecorderEngine(BaseEngine):
             "gateway_name": contract.gateway_name
         }
 
-        self.subscribe(contract)
+        # self.subscribe(contract)
         self.subscribe1min(contract)
         self.save_setting()
         self.put_event()
@@ -167,7 +167,7 @@ class RecorderEngine(BaseEngine):
         }
 
         self.subscribe(contract)
-        self.subscribe1min(contract)
+        # self.subscribe1min(contract)
         self.save_setting()
         self.put_event()
 

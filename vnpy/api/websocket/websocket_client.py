@@ -41,19 +41,24 @@ class WebsocketClient(object):
         self.host = None
 
         self._ws_lock = Lock()
+        # websocket对象
         self._ws = None
 
         self._worker_thread = None
         self._ping_thread = None
         self._active = False
-
+        # 代理 ip
         self.proxy_host = None
+        # 代理 port
         self.proxy_port = None
+        # ping 的间隔时间
         self.ping_interval = 60     # seconds
         self.header = {}
 
         # For debugging
+        # 用于调试  最新发送的文本
         self._last_sent_text = None
+        # 用于调试 最新接收的文本
         self._last_received_text = None
 
     def init(self, host: str, proxy_host: str = "", proxy_port: int = 0, ping_interval: int = 60, header: dict = None):
@@ -61,6 +66,7 @@ class WebsocketClient(object):
         :param ping_interval: unit: seconds, type: int
         """
         self.host = host
+        # ping 的间隔
         self.ping_interval = ping_interval  # seconds
 
         if header:
@@ -74,8 +80,10 @@ class WebsocketClient(object):
         """
         Start the client and on_connected function is called after webscoket
         is connected succesfully.
-
+        在 on_connected（） 函数调用成功后，
+        启动 websocket客户端
         Please don't send packet untill on_connected fucntion is called.
+        在on_connected（）函数没有调用前请不要发送 数据包
         """
 
         self._active = True
@@ -88,6 +96,7 @@ class WebsocketClient(object):
     def stop(self):
         """
         Stop the client.
+        停止websocket 客户端对象
         """
         self._active = False
         self._disconnect()
@@ -104,10 +113,13 @@ class WebsocketClient(object):
     def send_packet(self, packet: dict):
         """
         Send a packet (dict data) to server
-
+        发送字典数据到服务器  websocket
+        
         override this if you want to send non-json packet
         """
         text = json.dumps(packet)
+        print(text)
+        # 记录最后发送的文本以便调试。
         self._record_last_sent_text(text)
         return self._send_text(text)
 
@@ -130,7 +142,10 @@ class WebsocketClient(object):
             ws._send_binary(data)
 
     def _reconnect(self):
-        """"""
+        """
+        重新建立websocket连接
+        :return: 
+        """
         if self._active:
             self._disconnect()
             self._connect()
@@ -140,7 +155,10 @@ class WebsocketClient(object):
         return websocket.create_connection(*args, **kwargs)
 
     def _connect(self):
-        """"""
+        """
+        创建websocket对象
+        :return: 
+        """
         self._ws = self._create_connection(
             self.host,
             sslopt={"cert_reqs": ssl.CERT_NONE},
@@ -152,6 +170,7 @@ class WebsocketClient(object):
 
     def _disconnect(self):
         """
+        断开连接
         """
         with self._ws_lock:
             if self._ws:
@@ -161,8 +180,10 @@ class WebsocketClient(object):
     def _run(self):
         """
         Keep running till stop is called.
+        在stop（）没有调用前一直保持运行        
         """
         try:
+            # 创建websocket对象
             self._connect()
 
             # todo: onDisconnect
@@ -170,21 +191,24 @@ class WebsocketClient(object):
                 try:
                     ws = self._ws
                     if ws:
+                        # websocket接收数据
                         text = ws.recv()
 
                         # ws object is closed when recv function is blocking
+                        # 当recv函数阻塞时，关闭ws对象
                         if not text:
                             self._reconnect()
                             continue
-
+                        # 记录最后收到的文本以便调试。
                         self._record_last_received_text(text)
 
                         try:
+                            # 默认格式是 json  解包数据
                             data = self.unpack_data(text)
                         except ValueError as e:
                             print("websocket unable to parse data: " + text)
                             raise e
-
+                        # 回调函数，从服务器接收数据
                         self.on_packet(data)
                 # ws is closed before recv function is called
                 # For socket.error, see Issue #1608
@@ -205,7 +229,8 @@ class WebsocketClient(object):
     def unpack_data(data: str):
         """
         Default serialization format is json.
-
+        默认格式是 json
+        解包数据
         override this method if you want to use other serialization format.
         """
         return json.loads(data)
@@ -234,6 +259,7 @@ class WebsocketClient(object):
     def on_connected():
         """
         Callback when websocket is connected successfully.
+        当websocket 连接成功时回调。
         """
         pass
 
@@ -241,6 +267,7 @@ class WebsocketClient(object):
     def on_disconnected():
         """
         Callback when websocket connection is lost.
+        当websocket 断开时回调。
         """
         pass
 
@@ -281,11 +308,13 @@ class WebsocketClient(object):
     def _record_last_sent_text(self, text: str):
         """
         Record last sent text for debug purpose.
+        记录最后发送的文本以便调试。
         """
         self._last_sent_text = text[:1000]
 
     def _record_last_received_text(self, text: str):
         """
         Record last received text for debug purpose.
+        记录最后收到的文本以便调试。
         """
         self._last_received_text = text[:1000]

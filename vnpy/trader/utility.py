@@ -8,6 +8,9 @@ from typing import Callable
 
 import numpy as np
 import talib
+import time
+
+import datetime
 
 from .object import BarData, TickData
 from .constant import Exchange, Interval
@@ -131,6 +134,91 @@ class ToString:
         :return: 
         """
         return "{}->({})".format(self.__class__.__name__,self.getDescription())
+
+
+class TimeUtils(object):
+    """
+    时间处理函数
+    """
+
+    def convert_time(self, timestamp):
+        """
+        时间戳转换成日期和时间 str类型 单位 s
+        :param timestamp: 
+        :return: 
+        """
+        # 转换成localtime
+        time_local = time.localtime(timestamp)
+        # 转换成新的时间格式(2016-05-05 20:28:54)
+        dt = time.strftime("%Y-%m-%d %H:%M:%S", time_local)
+        return dt
+
+    def convert_date(self, timestamp):
+        """
+        时间戳转换成日期  单位 s
+        :param timestamp: 
+        :return: 
+        """
+        # 转换成localtime
+        time_local = time.localtime(timestamp)
+        # 转换成新的时间格式(2016-05-05 20:28:54)
+        dt = time.strftime("%Y-%m-%d", time_local)
+        return dt
+
+    def convert_datetime(self, timestamp):
+        """
+        时间戳转换成日期 datetime类型 单位 s
+        :param timestamp: 
+        :return: datetime类型 的日期和时间
+        """
+        # 转换成localtime
+        time_local = time.localtime(timestamp)
+        # str  to   datetime
+        dt_datetime = datetime.datetime(time_local.tm_year, time_local.tm_mon, time_local.tm_mday,
+                                        time_local.tm_hour, time_local.tm_min, time_local.tm_sec)
+        return dt_datetime
+
+    def get_secend(self, timestamp):
+        """
+        从时间戳（s）中获取到秒   
+        :param timestamp: 时间戳 （s）
+        :return: 返回 秒
+        """
+        # 转换成localtime
+        time_local = time.localtime(timestamp)
+        return time_local.tm_sec
+
+    def convert_date2timestamp(self, date):
+        """
+        str    把日期(2016-05-05 20:28:54) 转换成 时间戳    单位s
+        :param date: (2016-05-05 20:28:54)
+        :return: 时间戳 s
+        """
+        # 转为时间数组
+        timeArray = time.strptime(date, "%Y-%m-%d %H:%M:%S")
+        # 转为时间戳
+        timeStamp = int(time.mktime(timeArray))
+        return timeStamp
+
+    def convert_date2timeArray(self, date):
+        """
+        str    把日期(2016-05-05 20:28:54) 转换成 timeArray    
+        :param date: (2016-05-05 20:28:54)
+        :return: datatime
+        """
+        # 转为时间数组
+        timeArray = time.strptime(date, "%Y-%m-%d %H:%M:%S")
+        return timeArray
+
+    def convert_datetime2timestamp(self, datetime):
+        """
+        （datetime 类型 ）把日期 转换成 时间戳    单位s
+        :param date: (2016-05-05 20:28:54)
+        :return: 时间戳 s
+        """
+        # 转为时间戳
+        timeStamp = int(time.mktime(datetime.timetuple()))
+        return timeStamp
 
 
 class BarGenerator(ToString):

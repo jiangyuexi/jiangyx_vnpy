@@ -33,7 +33,7 @@ from vnpy.trader.object import (
     OrderRequest,
     CancelRequest,
     SubscribeRequest,
-    SubscribeRequest1Min, BarData)
+    SubscribeRequest1Min, BarData, HistoryRequest)
 from vnpy.trader.event import EVENT_TIMER
 from vnpy.trader.utility import TimeUtils
 
@@ -232,10 +232,31 @@ class HuobiRestApi(RestClient):
         self.start(session_number)
 
         self.gateway.write_log("REST API启动成功")
-
+        # 请求所以对现货交易对，并进行处理
         self.query_contract()
+        # 查询账户
         self.query_account()
+        # 查询委托
         self.query_order()
+
+    def query_history(self, req: HistoryRequest):
+        """
+        获取历史k线数据
+        :param symbol:交易对 
+        :param period: 周期
+        :param size: 个数
+        :return: 
+        """
+        symbol = req.symbol
+        size = 2000
+        period = req.interval
+        # e.g: GET "https://api.huobi.pro/market/history/kline?period=1day&size=200&symbol=btcusdt
+        path = f"/market/history/kline?period={period}&size={size}&symbol={symbol}"
+        self.add_request(
+            method="GET",
+            path=path,
+            callback=self.on_query_history_kline
+        )
 
     def query_account(self):
         """"""
@@ -263,7 +284,10 @@ class HuobiRestApi(RestClient):
         )
 
     def query_contract(self):
-        """"""
+        """
+        此接口返回所有火币全球站支持的交易对
+        :return: 
+        """
         self.add_request(
             method="GET",
             path="/v1/common/symbols",
@@ -318,7 +342,12 @@ class HuobiRestApi(RestClient):
         )
 
     def on_query_account(self, data, request):
-        """"""
+        """
+        查询账户
+        :param data: 
+        :param request: 
+        :return: 
+        """
         if self.check_error(data, "查询账户"):
             return
 
@@ -330,7 +359,12 @@ class HuobiRestApi(RestClient):
         self.query_account_balance()
 
     def on_query_account_balance(self, data, request):
-        """"""
+        """
+        查询账户资金
+        :param data: 
+        :param request: 
+        :return: 
+        """
         if self.check_error(data, "查询账户资金"):
             return
 
@@ -352,7 +386,12 @@ class HuobiRestApi(RestClient):
                 self.gateway.on_account(account)
 
     def on_query_order(self, data, request):
-        """"""
+        """
+        查询委托
+        :param data: 
+        :param request: 
+        :return: 
+        """
         if self.check_error(data, "查询委托"):
             return
 
@@ -383,7 +422,12 @@ class HuobiRestApi(RestClient):
         self.gateway.write_log("委托信息查询成功")
 
     def on_query_contract(self, data, request):  # type: (dict, Request)->None
-        """"""
+        """
+        查询合约
+        :param data: 
+        :param request: 
+        :return: 
+        """
         if self.check_error(data, "查询合约"):
             return
 
@@ -410,6 +454,19 @@ class HuobiRestApi(RestClient):
             symbol_name_map[contract.symbol] = contract.name
 
         self.gateway.write_log("合约信息查询成功")
+
+    def on_query_history_kline(self, data, request):
+        """
+        获取历史k线数据回调函数
+        :param data: 
+        :param request: 
+        :return: 
+        """
+        if self.check_error(data, "获取历史k线数据"):
+            return
+
+        for d in data["data"]:
+            print(d)
 
     def on_send_order(self, data, request):
         """"""
@@ -463,7 +520,12 @@ class HuobiRestApi(RestClient):
         self.order_manager.on_order(order)
         
     def check_error(self, data: dict, func: str = ""):
-        """"""
+        """
+        检查rest api返回值是否有错误
+        :param data: 
+        :param func: 
+        :return: 
+        """
         if data["status"] != "error":
             return False
         
@@ -806,7 +868,7 @@ class HuobiDataWebsocketApi(HuobiWebsocketApiBase):
         # 如果 1min 快接结束了 才存入数据库
         tu = TimeUtils()
         secend = tu.get_secend(data["ts"] // 1000)
-        if 5 < secend < 53:
+        if 10 < secend < 40:
             return
         # print(secend)
         # 日期时间

@@ -118,7 +118,7 @@ class WebsocketClient(object):
         override this if you want to send non-json packet
         """
         text = json.dumps(packet)
-        print(text)
+        # print(text)
         # 记录最后发送的文本以便调试。
         self._record_last_sent_text(text)
         return self._send_text(text)

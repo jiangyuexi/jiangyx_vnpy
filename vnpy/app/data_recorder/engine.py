@@ -3,24 +3,27 @@
 from threading import Thread
 from queue import Queue, Empty
 from copy import copy
-
+from time import sleep
+import datetime
 from vnpy.event import Event, EventEngine
+from vnpy.trader.constant import Interval
 from vnpy.trader.engine import BaseEngine, MainEngine
 from vnpy.trader.object import (
     SubscribeRequest,
     SubscribeRequest1Min,
     TickData,
     BarData,
-    ContractData
-)
-from vnpy.trader.event import EVENT_TICK, EVENT_CONTRACT, EVENT_BAR
-from vnpy.trader.utility import load_json, save_json, BarGenerator
+    ContractData,
+    HistoryRequest)
+from vnpy.trader.event import EVENT_TICK, EVENT_CONTRACT, EVENT_BAR, EVENT_CONTRACT_1MIN
+from vnpy.trader.utility import load_json, save_json, BarGenerator, extract_vt_symbol, TimeUtils
 from vnpy.trader.database import database_manager
 
-
+# 应用名称， 这个应用功能是 数据实时获取并存储， 还有历史（1min k）数据的获取与存储
 APP_NAME = "DataRecorder"
 
 EVENT_RECORDER_LOG = "eRecorderLog"
+# 更新 tick、bar数据的交易对代号 事件
 EVENT_RECORDER_UPDATE = "eRecorderUpdate"
 
 
@@ -40,9 +43,9 @@ class RecorderEngine(BaseEngine):
         self.thread = Thread(target=self.run)
         # 活动状态初始为False
         self.active = False
-        # 存入数据库的 tick 交易对
+        # 存入数据库的 tick 交易对， 从data_recorder_setting.json里获取
         self.tick_recordings = {}
-        # 存入数据库的 bar 交易对
+        # 存入数据库的 bar 交易对，从data_recorder_setting.json里获取
         self.bar_recordings = {}
         # 存放生成的 bar
         self.bar_generators = {}
@@ -138,9 +141,10 @@ class RecorderEngine(BaseEngine):
             "gateway_name": contract.gateway_name
         }
 
-        # self.subscribe(contract)
+        self.subscribe(contract)
         self.subscribe1min(contract)
         self.save_setting()
+        # 把需要保存的tick、bar数据的交易对代号放进事件引擎。
         self.put_event()
 
         self.write_log(f"添加K线记录成功：{vt_symbol}")
@@ -167,8 +171,9 @@ class RecorderEngine(BaseEngine):
         }
 
         self.subscribe(contract)
-        # self.subscribe1min(contract)
+        self.subscribe1min(contract)
         self.save_setting()
+        # 把需要保存的tick、bar数据的交易对代号放进事件引擎。
         self.put_event()
 
         self.write_log(f"添加Tick记录成功：{vt_symbol}")
@@ -185,6 +190,7 @@ class RecorderEngine(BaseEngine):
 
         self.bar_recordings.pop(vt_symbol)
         self.save_setting()
+        # 把需要保存的tick、bar数据的交易对代号放进事件引擎。
         self.put_event()
 
         self.write_log(f"移除K线记录成功：{vt_symbol}")
@@ -202,7 +208,7 @@ class RecorderEngine(BaseEngine):
         self.tick_recordings.pop(vt_symbol)
         # 保存配置信息
         self.save_setting()
-        # 更新事件引擎的数据采集事件
+        #  把需要保存的tick、bar数据的交易对代号放进事件引擎。
         self.put_event()
 
         self.write_log(f"移除Tick记录成功：{vt_symbol}")
@@ -216,7 +222,7 @@ class RecorderEngine(BaseEngine):
         self.event_engine.register(EVENT_TICK, self.process_tick_event)
         # bar 数据数据， 把bar数据存入数据库
         self.event_engine.register(EVENT_BAR, self.process_bar_event)
-        # 订阅tick数据 和 bar 1min 数据
+        # 订阅tick数据 和 bar 1min 数据， rest 请求 bar 1min 历史数据
         self.event_engine.register(EVENT_CONTRACT, self.process_contract_event)
 
     def process_tick_event(self, event: Event):
@@ -244,6 +250,7 @@ class RecorderEngine(BaseEngine):
         :param event: 
         :return: 
         """
+        # print("把bar数据存入数据库")
         # 拿到 bar数据
         bar = event.data
 
@@ -269,6 +276,13 @@ class RecorderEngine(BaseEngine):
         if vt_symbol in self.bar_recordings:
             # 如果交易对符号在bar_recordings，则订阅bar 数据
             self.subscribe1min(contract)
+
+        if vt_symbol in self.bar_recordings:
+            # 如果交易对符号在bar_recordings，获取它的1min bar历史数据
+            # rest api 请求 1min bar 数据
+            for _ in range(1):
+                self.rest_get_1min_bar(contract, 0, 0)
+                sleep(1)
 
     def write_log(self, msg: str):
         """
@@ -365,3 +379,33 @@ class RecorderEngine(BaseEngine):
         )
         # 从指定的gateway 订阅 1min bar数据
         self.main_engine.subscribe1min(req, contract.gateway_name)
+
+    def rest_get_1min_bar(self, contract: ContractData, start, end):
+        """
+        rest api 获取 1min bar 数据
+        :param contract: 
+        :return: 
+        """
+        ###################################################################################
+        # 准备 HistoryRequest 对象 开始
+        symbol = contract.symbol
+        exchange = contract.exchange
+        interval = Interval.MINUTE
+        tu = TimeUtils()
+        start = tu.convert_datetime(tu.convert_date2timestamp("2019-07-05 00:00:00"))
+        end = None
+        req = HistoryRequest(
+            symbol=symbol,
+            exchange=exchange,
+            interval=interval,
+            start=start,
+            end=end
+        )
+        # 准备 HistoryRequest 对象 完毕
+        ####################################################################################
+        _, exchange_str = str(exchange).split('.')
+        contract = self.main_engine.get_contract(f"{symbol}.{exchange_str}")
+        r = self.main_engine.query_history(req=req, gateway_name=contract.gateway_name)
+        print(r)
+        # 获取历史数据并保存
+        # self.main_engine.query_history_save(req=req, gateway_name=contract.gateway_name)

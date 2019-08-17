@@ -89,6 +89,7 @@ class BaseGateway(ABC):
     def on_event(self, type: str, data: Any = None):
         """
         General event push.
+        生成时间，然后放进队列
         """
         event = Event(type, data)
         self.event_engine.put(event)
@@ -153,6 +154,7 @@ class BaseGateway(ABC):
         """
         Contract event push.
         """
+        # websocket 请求 tick 和bar数据事件
         self.on_event(EVENT_CONTRACT, contract)
 
     def write_log(self, msg: str):
@@ -272,6 +274,7 @@ class BaseGateway(ABC):
     def query_history(self, req: HistoryRequest):
         """
         Query bar history data.
+        请求 bar 历史数据
         """
         pass
 

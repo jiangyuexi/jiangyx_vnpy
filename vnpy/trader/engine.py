@@ -230,7 +230,7 @@ class MainEngine:
 
     def query_history(self, req: HistoryRequest, gateway_name: str):
         """
-        Send cancel order request to a specific gateway.
+        指定 gateway 请求历史数据
         """
         gateway = self.get_gateway(gateway_name)
         if gateway:
@@ -466,12 +466,14 @@ class OmsEngine(BaseEngine):
     def get_contract(self, vt_symbol):
         """
         Get contract data by vt_symbol.
+        通过 vt_symbol 获取 现货/合约 数据
         """
         return self.contracts.get(vt_symbol, None)
 
     def get_all_ticks(self):
         """
         Get all tick data.
+        获取所有的tick 数据
         """
         return list(self.ticks.values())
 

@@ -18,6 +18,7 @@ from .constant import Exchange, Interval
 
 def extract_vt_symbol(vt_symbol: str):
     """
+    通过. 把 vt_symbol 拆分成 (symbol, exchange)
     :return: (symbol, exchange)
     """
     symbol, exchange_str = vt_symbol.split('.')
@@ -126,7 +127,7 @@ class ToString:
         """
         #利用str的format格式化字符串
         #利用生成器推导式去获取key和self中key对应的值的集合
-        return ",".join("{}={}".format(key,getattr(self,key)) for key in self.__dict__.keys())
+        return ",".join("{}={}".format(key, getattr(self, key)) for key in self.__dict__.keys())
 
     def __str__(self):
         """

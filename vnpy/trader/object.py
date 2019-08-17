@@ -235,7 +235,7 @@ class ContractData(BaseData):
     """
     # 交易对符号
     symbol: str
-    # 交易所
+    # 交易所名字
     exchange: Exchange
     name: str
     product: Product

@@ -45,7 +45,7 @@ def main():
     # main_engine.add_gateway(BitmexGateway)
     # main_engine.add_gateway(TigerGateway)
     # main_engine.add_gateway(OesGateway)
-    # main_engine.add_gateway(OkexfGateway)
+    main_engine.add_gateway(OkexfGateway)
 
 
     # 添加火币的交互通道
@@ -55,13 +55,13 @@ def main():
     #     # self.main_engine.connect(setting, self.gateway_name)
     #     # sleep(10)
     #     main_engine.add_gateway(HuobiGateway)
-    # main_engine.add_gateway(HuobiGateway)
+    main_engine.add_gateway(HuobiGateway)
 
 
 
     # main_engine.add_gateway(BitfinexGateway)
     # main_engine.add_gateway(OnetokenGateway)
-    # main_engine.add_gateway(OkexGateway)
+    main_engine.add_gateway(OkexGateway)
     main_engine.add_gateway(HbdmGateway)
 
     # 把 app 保存到 apps 和 engines 里

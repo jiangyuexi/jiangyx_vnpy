@@ -15,7 +15,7 @@ from vnpy.trader.object import (
     BarData,
     ContractData,
     HistoryRequest)
-from vnpy.trader.event import EVENT_TICK, EVENT_CONTRACT, EVENT_BAR, EVENT_CONTRACT_1MIN
+from vnpy.trader.event import EVENT_TICK, EVENT_CONTRACT, EVENT_BAR
 from vnpy.trader.utility import load_json, save_json, BarGenerator, extract_vt_symbol, TimeUtils
 from vnpy.trader.database import database_manager
 

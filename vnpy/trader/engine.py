@@ -388,7 +388,10 @@ class OmsEngine(BaseEngine):
         self.main_engine.get_all_active_orders = self.get_all_active_orders
 
     def register_event(self):
-        """"""
+        """
+        添加事件到 事件引擎
+        :return: 
+        """
         self.event_engine.register(EVENT_TICK, self.process_tick_event)
         self.event_engine.register(EVENT_ORDER, self.process_order_event)
         self.event_engine.register(EVENT_TRADE, self.process_trade_event)
@@ -429,7 +432,11 @@ class OmsEngine(BaseEngine):
         self.accounts[account.vt_accountid] = account
 
     def process_contract_event(self, event: Event):
-        """"""
+        """
+        保存 symbol 符号
+        :param event: 
+        :return: 
+        """
         contract = event.data
         self.contracts[contract.vt_symbol] = contract
 
@@ -504,6 +511,7 @@ class OmsEngine(BaseEngine):
     def get_all_contracts(self):
         """
         Get all contract data.
+        获取所有的 symbol 数据
         """
         return list(self.contracts.values())
 

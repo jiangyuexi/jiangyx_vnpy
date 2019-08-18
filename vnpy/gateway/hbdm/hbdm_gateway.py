@@ -1154,7 +1154,7 @@ class HbdmDataWebsocketApi(HbdmWebsocketApiBase):
         # 如果 1min 快接结束了 才存入数据库
         tu = TimeUtils()
         secend = tu.get_secend(data["ts"] // 1000)
-        if 10 < secend < 40:
+        if secend < 45:
             return
         # print(secend)
         # print(tick_data)

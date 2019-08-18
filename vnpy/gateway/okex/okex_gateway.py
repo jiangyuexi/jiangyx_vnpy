@@ -819,8 +819,8 @@ class OkexWebsocketApi(WebsocketClient):
 
         # 日期时间
         bar.datetime = utc_to_local(d["candle"][0])
-        print(d["candle"][0])
-        print(bar.datetime)
+        # print(d["candle"][0])
+        # print(bar.datetime)
         # 开盘价
         bar.open_price = float(d["candle"][1])
         # 最高价

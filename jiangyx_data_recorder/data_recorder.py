@@ -58,7 +58,7 @@ def main():
         # 连接火币平台
         connect = ConnectNoDialog(main_engine=main_engine, gateway_name=name)
         connect.connect()
-        sleep(5)
+        sleep(1)
     while True:
         # 一天
         sleep(24 * 60 * 60)

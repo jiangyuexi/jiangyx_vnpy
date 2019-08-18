@@ -25,6 +25,7 @@ from vnpy.trader.constant import (
     OrderType,
     Product,
     Status,
+    Offset,
     Interval
 )
 from vnpy.trader.gateway import BaseGateway
@@ -34,12 +35,13 @@ from vnpy.trader.object import (
     TradeData,
     AccountData,
     ContractData,
+    PositionData,
     BarData,
     OrderRequest,
     CancelRequest,
     SubscribeRequest,
-    HistoryRequest
-)
+    HistoryRequest,
+    SubscribeRequest1Min)
 
 REST_HOST = "https://www.okex.com"
 WEBSOCKET_HOST = "wss://real.okex.com:10442/ws/v3"
@@ -127,8 +129,14 @@ class OkexGateway(BaseGateway):
     def subscribe(self, req: SubscribeRequest):
         """"""
         # 等待websocket对象创建成功
-        sleep(10)
+        sleep(5)
         self.ws_api.subscribe(req)
+
+    def subscribe1min(self, req: SubscribeRequest1Min):
+        """"""
+        # 等待websocket对象创建成功
+        sleep(5)
+        self.ws_api.subscribe1min(req)
 
     def send_order(self, req: OrderRequest):
         """"""
@@ -563,7 +571,10 @@ class OkexWebsocketApi(WebsocketClient):
         self.connect_time = 0
 
         self.callbacks = {}
+        # tick 数据字典
         self.ticks = {}
+        # bar 数据字典
+        self.bars = {}
 
     def connect(
         self,
@@ -590,6 +601,7 @@ class OkexWebsocketApi(WebsocketClient):
     def subscribe(self, req: SubscribeRequest):
         """
         Subscribe to tick data upate.
+        订阅tick数据来更新
         """
         tick = TickData(
             symbol=req.symbol,
@@ -610,6 +622,30 @@ class OkexWebsocketApi(WebsocketClient):
         req = {
             "op": "subscribe",
             "args": [channel_ticker, channel_depth]
+        }
+        self.send_packet(req)
+
+    def subscribe1min(self, req: SubscribeRequest1Min):
+        """
+        Subscribe to bar data upate.
+        订阅1 分钟 bar数据来更新
+        """
+        min1bar = BarData(
+            symbol=req.symbol,
+            exchange=req.exchange,
+            datetime=datetime.now(),
+            interval=Interval.MINUTE,
+            gateway_name=self.gateway_name,
+        )
+
+        self.bars[req.symbol] = min1bar
+        # 现货 1 分钟 bar
+        channel_1min_bar = f"spot/candle60s:{req.symbol}"
+        self.callbacks[channel_1min_bar] = self.on_1min_bar
+        # websocket 订阅
+        req = {
+            "op": "subscribe",
+            "args": [channel_1min_bar]
         }
         self.send_packet(req)
 
@@ -678,6 +714,7 @@ class OkexWebsocketApi(WebsocketClient):
         """
         self.callbacks["spot/ticker"] = self.on_ticker
         self.callbacks["spot/depth5"] = self.on_depth
+        self.callbacks["spot/candle60s"] = self.on_1min_bar
         self.callbacks["spot/account"] = self.on_account
         self.callbacks["spot/order"] = self.on_order
 
@@ -768,6 +805,33 @@ class OkexWebsocketApi(WebsocketClient):
             # 时间戳
             tick.timestamp = datetime.timestamp(tick.datetime)
             self.gateway.on_tick(copy(tick))
+
+    def on_1min_bar(self, d):
+        """
+        
+        :param d: 
+        :return: 
+        """
+        symbol = d["instrument_id"]
+        bar = self.bars.get(symbol, None)
+        if not bar:
+            return
+
+        # 日期时间
+        bar.datetime = utc_to_local(d["candle"][0])
+        # print(d["candle"][0])
+        # print(bar.datetime)
+        # 开盘价
+        bar.open_price = float(d["candle"][1])
+        # 最高价
+        bar.high_price = float(d["candle"][2])
+        # 最低价
+        bar.low_price = float(d["candle"][3])
+        # 收盘价
+        bar.close_price = float(d["candle"][4])
+        # 成交量
+        bar.volume = float(d["candle"][5])
+        self.gateway.on_bar(copy(bar))
 
     def on_order(self, d):
         """"""

@@ -15,7 +15,6 @@ EVENT_POSITION = "ePosition."
 EVENT_ACCOUNT = "eAccount."
 # websocket 请求 tick 和bar数据事件
 EVENT_CONTRACT = "eContract."
-# rest api 请求 1min bar 历史数据
-EVENT_CONTRACT_1MIN = "eContract1min."
+
 # 日志事件
 EVENT_LOG = "eLog"

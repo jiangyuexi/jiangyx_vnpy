@@ -277,13 +277,6 @@ class RecorderEngine(BaseEngine):
             # 如果交易对符号在bar_recordings，则订阅bar 数据
             self.subscribe1min(contract)
 
-        if vt_symbol in self.bar_recordings:
-            # 如果交易对符号在bar_recordings，获取它的1min bar历史数据
-            # rest api 请求 1min bar 数据
-            for _ in range(1):
-                self.rest_get_1min_bar(contract, 0, 0)
-                sleep(1)
-
     def write_log(self, msg: str):
         """
         向事件引擎 队列里丢 EVENT_RECORDER_LOG = "eRecorderLog" 类型的事件
@@ -380,32 +373,3 @@ class RecorderEngine(BaseEngine):
         # 从指定的gateway 订阅 1min bar数据
         self.main_engine.subscribe1min(req, contract.gateway_name)
 
-    def rest_get_1min_bar(self, contract: ContractData, start, end):
-        """
-        rest api 获取 1min bar 数据
-        :param contract: 
-        :return: 
-        """
-        ###################################################################################
-        # 准备 HistoryRequest 对象 开始
-        symbol = contract.symbol
-        exchange = contract.exchange
-        interval = Interval.MINUTE
-        tu = TimeUtils()
-        start = tu.convert_datetime(tu.convert_date2timestamp("2019-07-05 00:00:00"))
-        end = None
-        req = HistoryRequest(
-            symbol=symbol,
-            exchange=exchange,
-            interval=interval,
-            start=start,
-            end=end
-        )
-        # 准备 HistoryRequest 对象 完毕
-        ####################################################################################
-        _, exchange_str = str(exchange).split('.')
-        contract = self.main_engine.get_contract(f"{symbol}.{exchange_str}")
-        r = self.main_engine.query_history(req=req, gateway_name=contract.gateway_name)
-        print(r)
-        # 获取历史数据并保存
-        # self.main_engine.query_history_save(req=req, gateway_name=contract.gateway_name)

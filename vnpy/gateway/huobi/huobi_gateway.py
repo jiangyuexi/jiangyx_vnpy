@@ -239,25 +239,6 @@ class HuobiRestApi(RestClient):
         # 查询委托
         self.query_order()
 
-    def query_history(self, req: HistoryRequest):
-        """
-        获取历史k线数据
-        :param symbol:交易对 
-        :param period: 周期
-        :param size: 个数
-        :return: 
-        """
-        symbol = req.symbol
-        size = 2000
-        period = req.interval
-        # e.g: GET "https://api.huobi.pro/market/history/kline?period=1day&size=200&symbol=btcusdt
-        path = f"/market/history/kline?period={period}&size={size}&symbol={symbol}"
-        self.add_request(
-            method="GET",
-            path=path,
-            callback=self.on_query_history_kline
-        )
-
     def query_account(self):
         """"""
         self.add_request(
@@ -454,19 +435,6 @@ class HuobiRestApi(RestClient):
             symbol_name_map[contract.symbol] = contract.name
 
         self.gateway.write_log("合约信息查询成功")
-
-    def on_query_history_kline(self, data, request):
-        """
-        获取历史k线数据回调函数
-        :param data: 
-        :param request: 
-        :return: 
-        """
-        if self.check_error(data, "获取历史k线数据"):
-            return
-
-        for d in data["data"]:
-            print(d)
 
     def on_send_order(self, data, request):
         """"""

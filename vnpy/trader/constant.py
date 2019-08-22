@@ -64,6 +64,8 @@ class OrderType(Enum):
     STOP = "STOP"
     FAK = "FAK"
     FOK = "FOK"
+    LIMITIFTOUCHED = "LIMITIFTOUCHED"
+    MARKETIFTOUCHED = "MARKETIFTOUCHED"
 
 
 class OptionType(Enum):

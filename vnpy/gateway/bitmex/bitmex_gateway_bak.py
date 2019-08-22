@@ -105,7 +105,6 @@ class BitmexGateway(BaseGateway):
         """"""
         key = setting["ID"]
         secret = setting["Secret"]
-        user_id = setting["user_id"]
         session_number = setting["会话数"]
         server = setting["服务器"]
         proxy_host = setting["代理地址"]
@@ -449,7 +448,6 @@ class BitmexWebsocketApi(WebsocketClient):
 
         self.key = ""
         self.secret = ""
-        self.user_id = ""
 
         self.callbacks = {
             "trade": self.on_tick,
@@ -599,12 +597,11 @@ class BitmexWebsocketApi(WebsocketClient):
 
         tick.last_price = d["price"]
         tick.datetime = datetime.strptime(
-            "1992-12-20", "%Y-%m-%d")
+            d["timestamp"], "%Y-%m-%dT%H:%M:%S.%fZ")
         self.gateway.on_tick(copy(tick))
 
     def on_depth(self, d):
         """"""
-        return
         symbol = d["symbol"]
         tick = self.ticks.get(symbol, None)
         if not tick:
@@ -622,16 +619,13 @@ class BitmexWebsocketApi(WebsocketClient):
 
         tick.datetime = datetime.strptime(
             d["timestamp"], "%Y-%m-%dT%H:%M:%S.%fZ")
-        # self.gateway.on_tick(copy(tick))
+        self.gateway.on_tick(copy(tick))
 
     def on_trade(self, d):
         """"""
         # Filter trade update with no trade volume and side (funding)
         if not d["lastQty"] or not d["side"]:
             return
-
-        print("trade")
-        print(d)
 
         tradeid = d["execID"]
         if tradeid in self.trades:
@@ -661,9 +655,6 @@ class BitmexWebsocketApi(WebsocketClient):
         """"""
         if "ordStatus" not in d:
             return
-
-        print("order")
-        print(d)
 
         sysid = d["orderID"]
         order = self.orders.get(sysid, None)
@@ -695,8 +686,6 @@ class BitmexWebsocketApi(WebsocketClient):
 
     def on_position(self, d):
         """"""
-        print("on_position")
-        print(d)
         position = PositionData(
             symbol=d["symbol"],
             exchange=Exchange.BITMEX,
@@ -708,28 +697,19 @@ class BitmexWebsocketApi(WebsocketClient):
         self.gateway.on_position(position)
 
     def on_account(self, d):
-        """
-        处理账号资金信息 可以用资金，冻结资金，总资金
-        :param d: 
-        :return: 
-        """
+        """"""
         accountid = str(d["account"])
         account = self.accounts.get(accountid, None)
         if not account:
             account = AccountData(accountid=accountid,
                                   gateway_name=self.gateway_name)
             self.accounts[accountid] = account
-        # 总金额（xbt）
-        account.balance = float(d.get("marginBalance", account.balance))/1000000000
-        # 可用xbt
-        account.available = float(d.get("availableMargin", account.available))/1000000000
-        # 冻结 xbt
-        account.frozen = account.balance - account.available
-        # 备注名
-        user_id = self.user_id
-        # 插入数据库
 
-        # self.gateway.on_account(copy(account))
+        account.balance = d.get("marginBalance", account.balance)
+        account.available = d.get("availableMargin", account.available)
+        account.frozen = account.balance - account.available
+       
+        self.gateway.on_account(copy(account))
 
     def on_contract(self, d):
         """"""
@@ -738,8 +718,6 @@ class BitmexWebsocketApi(WebsocketClient):
 
         if not d["lotSize"]:
             return
-        print("交易对")
-        print(d)
 
         contract = ContractData(
             symbol=d["symbol"],
@@ -755,6 +733,3 @@ class BitmexWebsocketApi(WebsocketClient):
         )
 
         self.gateway.on_contract(contract)
-
-
-class Money()

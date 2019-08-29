@@ -451,7 +451,11 @@ class BacktestingEngine:
         return statistics
 
     def show_chart(self, df: DataFrame = None):
-        """"""
+        """
+        在plt显示数据
+        :param df: 
+        :return: 
+        """
         if not df:
             df = self.daily_df
         

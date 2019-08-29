@@ -265,8 +265,11 @@ class BaseEngine(ABC):
         engine_name: str,
     ):
         """"""
+        # 主引擎
         self.main_engine = main_engine
+        # 数据引擎
         self.event_engine = event_engine
+        # 引擎名字
         self.engine_name = engine_name
 
     def close(self):
@@ -277,6 +280,7 @@ class BaseEngine(ABC):
 class LogEngine(BaseEngine):
     """
     Processes log event and output with logging module.
+    日志引擎， 处理日志事件并输出到日志模块
     """
 
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine):

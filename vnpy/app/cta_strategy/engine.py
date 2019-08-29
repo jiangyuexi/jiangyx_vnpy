@@ -12,6 +12,7 @@ from queue import Queue
 from copy import copy
 
 from vnpy.event import Event, EventEngine
+from vnpy.gateway.okex import OkexGateway
 from vnpy.trader.engine import BaseEngine, MainEngine
 from vnpy.trader.object import (
     OrderRequest,
@@ -39,7 +40,7 @@ from vnpy.trader.constant import (
 from vnpy.trader.utility import load_json, save_json, extract_vt_symbol
 # 初始化数据库
 from vnpy.trader.database import database_manager
-from vnpy.trader.rqdata import rqdata_client
+
 
 from .base import (
     APP_NAME,
@@ -95,9 +96,10 @@ class CtaEngine(BaseEngine):
 
         self.init_thread = None
         self.init_queue = Queue()
-
-        self.rq_client = None
-        self.rq_symbols = set()
+        # 交易客户端
+        self.client = None
+        # 交易对 符号
+        self.symbols = set()
 
         self.vt_tradeids = set()    # for filtering duplicate trade
 
@@ -105,8 +107,9 @@ class CtaEngine(BaseEngine):
 
     def init_engine(self):
         """
+        初始化引擎
         """
-        self.init_rqdata()
+        self.init_data()
         self.load_strategy_class()
         self.load_strategy_setting()
         self.load_strategy_data()
@@ -124,10 +127,11 @@ class CtaEngine(BaseEngine):
         self.event_engine.register(EVENT_TRADE, self.process_trade_event)
         self.event_engine.register(EVENT_POSITION, self.process_position_event)
 
-    def init_rqdata(self):
+    def init_data(self):
         """
-        Init RQData client.
+        Init Data client.
         """
+
         result = rqdata_client.init()
         if result:
             self.write_log("RQData数据接口初始化成功")
@@ -145,6 +149,7 @@ class CtaEngine(BaseEngine):
             start=start,
             end=end
         )
+
         data = rqdata_client.query_history(req)
         return data
 
@@ -878,6 +883,7 @@ class CtaEngine(BaseEngine):
     def send_email(self, msg: str, strategy: CtaTemplate = None):
         """
         Send email to default receiver.
+        发送email 
         """
         if strategy:
             subject = f"{strategy.strategy_name}"

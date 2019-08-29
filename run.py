@@ -1,4 +1,5 @@
-
+from vnpy.app.cta_backtester import CtaBacktesterApp
+from vnpy.app.cta_strategy import CtaStrategyApp
 from vnpy.event import EventEngine
 
 from vnpy.trader.engine import MainEngine
@@ -42,10 +43,10 @@ def main():
     # main_engine.add_gateway(FutuGateway)
 
     # bitmex交易所
-    main_engine.add_gateway(BitmexGateway)
+    # main_engine.add_gateway(BitmexGateway)
     # main_engine.add_gateway(TigerGateway)
     # main_engine.add_gateway(OesGateway)
-    # main_engine.add_gateway(OkexfGateway)
+    main_engine.add_gateway(OkexfGateway)
 
 
     # 添加火币的交互通道
@@ -55,20 +56,20 @@ def main():
     #     # self.main_engine.connect(setting, self.gateway_name)
     #     # sleep(10)
     #     main_engine.add_gateway(HuobiGateway)
-    # main_engine.add_gateway(HuobiGateway)
+    main_engine.add_gateway(HuobiGateway)
 
 
 
     # main_engine.add_gateway(BitfinexGateway)
     # main_engine.add_gateway(OnetokenGateway)
-    # main_engine.add_gateway(OkexGateway)
-    # main_engine.add_gateway(HbdmGateway)
+    main_engine.add_gateway(OkexGateway)
+    main_engine.add_gateway(HbdmGateway)
 
     # 把 app 保存到 apps 和 engines 里
-    # main_engine.add_app(CtaStrategyApp)
-    # main_engine.add_app(CtaBacktesterApp)
-    # main_engine.add_app(CsvLoaderApp)
-    # main_engine.add_app(AlgoTradingApp)
+    main_engine.add_app(CtaStrategyApp)
+    main_engine.add_app(CtaBacktesterApp)
+    main_engine.add_app(CsvLoaderApp)
+    main_engine.add_app(AlgoTradingApp)
     main_engine.add_app(DataRecorderApp)
 
     main_window = MainWindow(main_engine, event_engine)

@@ -30,6 +30,7 @@ from vnpy.trader.database import database_manager
 from vnpy.trader.engine import BaseEngine, MainEngine
 from vnpy.trader.object import BarData
 
+# CSV 加载 应用
 APP_NAME = "CsvLoader"
 
 
@@ -39,11 +40,13 @@ class CsvLoaderEngine(BaseEngine):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine):
         """"""
         super().__init__(main_engine, event_engine, APP_NAME)
-
+        # 文件路径
         self.file_path: str = ""
-
+        # 交易对符号
         self.symbol: str = ""
+        # 交易所
         self.exchange: Exchange = Exchange.SSE
+        # 时间间隔
         self.interval: Interval = Interval.MINUTE
         self.datetime_head: str = ""
         self.open_head: str = ""
@@ -68,12 +71,15 @@ class CsvLoaderEngine(BaseEngine):
     ):
         """
         load by text mode file handle
+        通过文件 句柄加载 bar 数据
+        返回 开始 结束 和 总共有多少个 bar
         """
         reader = csv.DictReader(f)
 
         bars = []
         start = None
         count = 0
+        # 循环生成 bar 数据， 放进bar列表里
         for item in reader:
             if datetime_format:
                 dt = datetime.strptime(item[datetime_head], datetime_format)
@@ -102,6 +108,7 @@ class CsvLoaderEngine(BaseEngine):
         end = bar.datetime
 
         # insert into database
+        # 存放到数据库
         database_manager.save_bar_data(bars)
         return start, end, count
 
@@ -121,6 +128,7 @@ class CsvLoaderEngine(BaseEngine):
     ):
         """
         load by filename
+        通过文件名 加载数据
         """
         with open(file_path, "rt") as f:
             return self.load_by_handle(

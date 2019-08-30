@@ -29,7 +29,7 @@ class AtrRsiStrategy(CtaTemplate):
     rsi_sell = 0
     intra_trade_high = 0
     intra_trade_low = 0
-
+    # 交易策略 参数配置
     parameters = ["atr_length", "atr_ma_length", "rsi_length",
                   "rsi_entry", "trailing_percent", "fixed_size"]
     variables = ["atr_value", "atr_ma", "rsi_value", "rsi_buy", "rsi_sell"]

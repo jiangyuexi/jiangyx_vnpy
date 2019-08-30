@@ -221,6 +221,14 @@ class TimeUtils(object):
         timeStamp = int(time.mktime(datetime.timetuple()))
         return timeStamp
 
+    def datetime2str(self, datetime):
+        """
+        （datetime 类型 ）把日期 转换成 字符串
+        :param date: (2016-05-05 20:28:54)
+        :return: “2016-05-05 20:28:54”
+        """
+        return datetime.strftime("%Y-%m-%d")
+
 
 class BarGenerator(ToString):
     """

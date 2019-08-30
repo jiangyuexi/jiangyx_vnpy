@@ -16,8 +16,8 @@ def init_sql(driver: Driver, settings: dict):
     from .database_sql import init
     keys = {'database', "host", "port", "user", "password"}
     settings = {k: v for k, v in settings.items() if k in keys}
-    _database_manager = init(driver, settings)
-    return _database_manager
+    db, _database_manager = init(driver, settings)
+    return db, _database_manager
 
 
 def init_nosql(driver: Driver, settings: dict):

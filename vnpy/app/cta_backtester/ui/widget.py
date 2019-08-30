@@ -183,6 +183,7 @@ class BacktesterManager(QtWidgets.QWidget):
 
     def start_backtesting(self):
         """"""
+        # 交易策略
         class_name = self.class_combo.currentText()
         vt_symbol = self.symbol_line.text()
         interval = self.interval_combo.currentText()
@@ -202,7 +203,7 @@ class BacktesterManager(QtWidgets.QWidget):
 
         new_setting = dialog.get_setting()
         self.settings[class_name] = new_setting
-
+        print(new_setting)
         result = self.backtester_engine.start_backtesting(
             class_name,
             vt_symbol,

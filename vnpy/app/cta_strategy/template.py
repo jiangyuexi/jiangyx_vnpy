@@ -13,6 +13,7 @@ class CtaTemplate(ABC):
     """"""
 
     author = ""
+    # 交易策略 参数配置
     parameters = []
     variables = []
 

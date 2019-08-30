@@ -19,8 +19,9 @@ from peewee import (
 )
 
 from vnpy.trader.constant import Exchange, Interval
+
 from vnpy.trader.object import BarData, TickData
-from vnpy.trader.utility import get_file_path
+from vnpy.trader.utility import get_file_path, TimeUtils
 from .database import BaseDatabaseManager, Driver
 
 
@@ -35,7 +36,8 @@ def init(driver: Driver, settings: dict):
 
     db = init_funcs[driver](settings)
     bar, tick = init_models(db, driver)
-    return SqlManager(bar, tick)
+    # 返回数据库对象，和数据库管理器
+    return db, SqlManager(bar, tick)
 
 
 def init_sqlite(settings: dict):
@@ -109,6 +111,7 @@ def init_models(db: Database, driver: Driver):
         def to_bar(self):
             """
             Generate BarData object from DbBarData.
+            从DbBarData中生成BarData对象
             """
             bar = BarData(
                 symbol=self.symbol,
@@ -362,19 +365,37 @@ class SqlManager(BaseDatabaseManager):
         start: datetime,
         end: datetime,
     ) -> Sequence[BarData]:
-        s = (
-            self.class_bar.select()
-            .where(
-                (self.class_bar.symbol == symbol) 
-                & (self.class_bar.exchange == exchange.value) 
-                & (self.class_bar.interval == interval.value) 
-                & (self.class_bar.datetime >= start) 
-                & (self.class_bar.datetime <= end)
-            )
-            .order_by(self.class_bar.datetime)
-        )
-        data = [db_bar.to_bar() for db_bar in s]
-        return data
+        # s = (
+        #     self.class_bar.select()
+        #     .where(
+        #         (self.class_bar.symbol == symbol)
+        #         & (self.class_bar.exchange == exchange.value)
+        #         & (self.class_bar.interval == interval.value)
+        #         & (self.class_bar.datetime >= start)
+        #         & (self.class_bar.datetime <= end)
+        #     )
+        #     .order_by(self.class_bar.datetime)
+        # )
+        from vnpy.trader.database import db
+        tu = TimeUtils()
+        sql_select = f"SELECT * FROM `DbBarData{tu.datetime2str(start)}` " + \
+                     f"WHERE symbol = '{symbol}' and " + \
+                     f"exchange = '{str(exchange).split('.')[1]}' and " + \
+                     f"datetime >= '{start}' and " + \
+                     f"datetime <= '{end}' " + \
+                     f"ORDER BY datetime"
+        print(sql_select)
+        # 获取游标
+        cursor = db.cursor()
+        # 执行多条
+        rows = cursor.select(sql_select)
+        # 提交事务
+        db.commit()
+        # 关闭游标
+        cursor.close()
+        # data = [db_bar.to_bar() for db_bar in s]
+        # return data
+
 
     def load_tick_data(
         self, symbol: str, exchange: Exchange, start: datetime, end: datetime

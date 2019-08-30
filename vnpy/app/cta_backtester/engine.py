@@ -149,17 +149,17 @@ class BacktesterEngine(BaseEngine):
     ):
         """
         运行回测
-        :param class_name: 
-        :param vt_symbol: 
-        :param interval: 
-        :param start: 
-        :param end: 
-        :param rate: 
-        :param slippage: 
-        :param size: 
-        :param pricetick: 
-        :param capital: 
-        :param setting: 
+        :param class_name:  策略名称
+        :param vt_symbol: 交易对.交易所
+        :param interval: 时间间隔
+        :param start: 开始时间
+        :param end: 结束时间
+        :param rate: 手续费
+        :param slippage: 滑点
+        :param size: 合约乘数
+        :param pricetick: 价格跳动
+        :param capital: 起始资金
+        :param setting: 配置参数
         :return: 
         """
         self.result_df = None
@@ -401,7 +401,8 @@ class BacktesterEngine(BaseEngine):
         end: datetime
     ):
         """
-        Query bar data from RQData.
+        下载历史数据，放在数据库里
+        
         """
         self.write_log(f"{vt_symbol}-{interval}开始下载历史数据")
 

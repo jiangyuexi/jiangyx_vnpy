@@ -11,4 +11,6 @@ if "VNPY_TESTING" not in os.environ:
     # vt_setting.json 中 "database."前缀的配置
     settings = get_settings("database.")
     # 创建数据库对象  现在不在这里创建了
-    database_manager: "BaseDatabaseManager" = init(settings=settings)
+    # database_manager: "BaseDatabaseManager" = init(settings=settings)
+    db, database_manager = init(settings=settings)
+

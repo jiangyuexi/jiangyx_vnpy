@@ -5,7 +5,7 @@ from vnpy.app.cta_strategy import CtaStrategyApp
 from vnpy.event import EventEngine
 
 from vnpy.trader.engine import MainEngine
-from vnpy.trader.noui.no_widget import ConnectNoDialog, ConfigBacktester
+from vnpy.trader.noui.no_widget import ConnectNoDialog, ConfigBacktester, BacktesterManager
 from vnpy.trader.ui import MainWindow, create_qapp
 
 from vnpy.gateway.bitmex import BitmexGateway
@@ -71,7 +71,7 @@ def main():
     main_engine.add_app(AlgoTradingApp)
     main_engine.add_app(DataRecorderApp)
 
-    # 获取所有交易通道
+    # 获取所有交易通道 名字
     gateway_names = main_engine.get_all_gateway_names()
     for name in gateway_names:
         # 连接火币平台
@@ -79,9 +79,8 @@ def main():
         connect.connect()
         sleep(1)
         # 配置回测系统
-        backtester = ConfigBacktester(main_engine=main_engine, gateway_name=name)
-        backtester.run_backtesting()
-
+        # backtester = BacktesterManager(main_engine=main_engine, event_engine=event_engine, gateway_name=name)
+        # backtester.start_backtesting()
 
 
     while True:

@@ -857,6 +857,7 @@ class CtaEngine(BaseEngine):
     def put_stop_order_event(self, stop_order: StopOrder):
         """
         Put an event to update stop order status.
+        放入一个 止损单事件到队列
         """
         event = Event(EVENT_CTA_STOPORDER, stop_order)
         self.event_engine.put(event)
@@ -864,6 +865,7 @@ class CtaEngine(BaseEngine):
     def put_strategy_event(self, strategy: CtaTemplate):
         """
         Put an event to update strategy status.
+        放入一个 策略状态事件到队列
         """
         data = strategy.get_data()
         event = Event(EVENT_CTA_STRATEGY, data)

@@ -18,8 +18,9 @@ class TestStrategy(CtaTemplate):
 
     tick_count = 0
     test_all_done = False
-
+    # 参数列表，保存参数的名称
     parameters = ["test_trigger"]
+    # 变量列表，保存了变量的名称
     variables = ["tick_count", "test_all_done"]
 
     def __init__(self, cta_engine, strategy_name, vt_symbol, setting):

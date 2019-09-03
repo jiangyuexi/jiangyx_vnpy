@@ -13,8 +13,9 @@ class CtaTemplate(ABC):
     """"""
 
     author = ""
-    # 交易策略 参数配置
+    # 交易策略 参数配置， 参数的名称
     parameters = []
+    # 变量列表，变量的民初
     variables = []
 
     def __init__(
@@ -199,6 +200,7 @@ class CtaTemplate(ABC):
     def cancel_all(self):
         """
         Cancel all orders sent by strategy.
+        通过策略 关闭所有订单
         """
         if self.trading:
             self.cta_engine.cancel_all(self)
@@ -224,6 +226,8 @@ class CtaTemplate(ABC):
     ):
         """
         Load historical bar data for initializing strategy.
+        加载历史bar 数据用于 初始化 策略
+        使用1 min bar 数据 合成 days天的
         """
         if not callback:
             callback = self.on_bar

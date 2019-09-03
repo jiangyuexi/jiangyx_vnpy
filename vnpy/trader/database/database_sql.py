@@ -341,8 +341,8 @@ def init_models(db: Database, driver: Driver):
 
     db.connect()
     # 如何在这里指定数据库表名， 或者根据日期新建数据库，每个数据库的表一致。
-    DbBarData._meta.table_name = "DbBarData" + str(datetime.date.today())
-    DbTickData._meta.table_name = "DbTickData" + str(datetime.date.today())
+    DbBarData._meta.table_name = "DbBarData"
+    DbTickData._meta.table_name = "DbTickData"
 
     # DbBarData._meta.table_name = "DbBarData" + str(datetime.date.today()) + \
     #                              str(time.strftime('%H', time.localtime()))
@@ -365,37 +365,20 @@ class SqlManager(BaseDatabaseManager):
         start: datetime,
         end: datetime,
     ) -> Sequence[BarData]:
-        # s = (
-        #     self.class_bar.select()
-        #     .where(
-        #         (self.class_bar.symbol == symbol)
-        #         & (self.class_bar.exchange == exchange.value)
-        #         & (self.class_bar.interval == interval.value)
-        #         & (self.class_bar.datetime >= start)
-        #         & (self.class_bar.datetime <= end)
-        #     )
-        #     .order_by(self.class_bar.datetime)
-        # )
-        from vnpy.trader.database import db
-        tu = TimeUtils()
-        sql_select = f"SELECT * FROM `DbBarData{tu.datetime2str(start)}` " + \
-                     f"WHERE symbol = '{symbol}' and " + \
-                     f"exchange = '{str(exchange).split('.')[1]}' and " + \
-                     f"datetime >= '{start}' and " + \
-                     f"datetime <= '{end}' " + \
-                     f"ORDER BY datetime"
-        print(sql_select)
-        # 获取游标
-        cursor = db.cursor()
-        # 执行多条
-        rows = cursor.select(sql_select)
-        # 提交事务
-        db.commit()
-        # 关闭游标
-        cursor.close()
-        # data = [db_bar.to_bar() for db_bar in s]
-        # return data
+        s = (
+            self.class_bar.select()
+            .where(
+                (self.class_bar.symbol == symbol)
+                & (self.class_bar.exchange == exchange.value)
+                & (self.class_bar.interval == interval.value)
+                & (self.class_bar.datetime >= start)
+                & (self.class_bar.datetime <= end)
+            )
+            .order_by(self.class_bar.datetime)
+        )
 
+        data = [db_bar.to_bar() for db_bar in s]
+        return data
 
     def load_tick_data(
         self, symbol: str, exchange: Exchange, start: datetime, end: datetime

@@ -40,7 +40,9 @@ class StopOrder:
     vt_orderids: list = field(default_factory=list)
     status: StopOrderStatus = StopOrderStatus.WAITING
 
-
+# CTA 日志事件
 EVENT_CTA_LOG = "eCtaLog"
+# CTA 策略事件
 EVENT_CTA_STRATEGY = "eCtaStrategy"
+# CTA 止损单
 EVENT_CTA_STOPORDER = "eCtaStopOrder"

@@ -383,7 +383,9 @@ class ArrayManager(object):
     """
     For:
     1. time series container of bar data
+    bar数据时序容器
     2. calculating technical indicator value
+    计算技术指标值
     """
 
     def __init__(self, size=100):
@@ -401,6 +403,7 @@ class ArrayManager(object):
     def update_bar(self, bar):
         """
         Update new bar data into array manager.
+        添加一个新的bar 数据到 am
         """
         self.count += 1
         if not self.inited and self.count >= self.size:
@@ -483,6 +486,7 @@ class ArrayManager(object):
     def atr(self, n, array=False):
         """
         Average True Range (ATR).
+        计算 ATR
         """
         result = talib.ATR(self.high, self.low, self.close, n)
         if array:

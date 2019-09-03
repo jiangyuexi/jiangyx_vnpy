@@ -1,11 +1,14 @@
 from time import sleep
 
 from vnpy.app.cta_backtester import CtaBacktesterApp
+from vnpy.app.cta_backtester.ui.no_widget import BacktesterManager
 from vnpy.app.cta_strategy import CtaStrategyApp
+from vnpy.app.cta_strategy.ui.no_widget import CtaManager, StrategyManager
+from vnpy.app.data_recorder.ui.no_widget import ConnectNoDialog
 from vnpy.event import EventEngine
 
 from vnpy.trader.engine import MainEngine
-from vnpy.trader.noui.no_widget import ConnectNoDialog, ConfigBacktester, BacktesterManager
+
 from vnpy.trader.ui import MainWindow, create_qapp
 
 from vnpy.gateway.bitmex import BitmexGateway
@@ -81,7 +84,15 @@ def main():
         # 配置回测系统
         # backtester = BacktesterManager(main_engine=main_engine, event_engine=event_engine, gateway_name=name)
         # backtester.start_backtesting()
+        # CTA 管理器
+        ctamanager = CtaManager(main_engine=main_engine, event_engine=event_engine)
+        data = {'strategy_name': 'testjiang', 'vt_symbol': 'BTC-USD-190927.OKEX', 'class_name':
+            'TestStrategy', 'author': '用Python的交易员', 'parameters': {'test_trigger': 10},
+                'variables': {'inited': False, 'trading': False, 'pos': 0, 'tick_count': 0, 'test_all_done': False}}
 
+        strategymanager = StrategyManager(cta_manager=ctamanager, cta_engine=ctamanager.cta_engine, data=data)
+        strategymanager.init_strategy()
+        strategymanager.start_strategy()
 
     while True:
         sleep(100000)

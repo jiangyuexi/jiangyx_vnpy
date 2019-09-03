@@ -6,6 +6,7 @@ from abc import ABC
 class BaseApp(ABC):
     """
     Absstract class for app.
+    app 的抽象基类
     """
 
     app_name = ""           # Unique name used for creating engine and widget

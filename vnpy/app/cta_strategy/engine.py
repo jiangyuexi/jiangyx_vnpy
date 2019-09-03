@@ -132,9 +132,9 @@ class CtaEngine(BaseEngine):
         Init Data client.
         """
 
-        result = rqdata_client.init()
-        if result:
-            self.write_log("RQData数据接口初始化成功")
+        # result = rqdata_client.init()
+        # if result:
+        #     self.write_log("RQData数据接口初始化成功")
 
     def query_bar_from_rq(
         self, symbol: str, exchange: Exchange, interval: Interval, start: datetime, end: datetime
@@ -142,16 +142,16 @@ class CtaEngine(BaseEngine):
         """
         Query bar data from RQData.
         """
-        req = HistoryRequest(
-            symbol=symbol,
-            exchange=exchange,
-            interval=interval,
-            start=start,
-            end=end
-        )
-
-        data = rqdata_client.query_history(req)
-        return data
+        # req = HistoryRequest(
+        #     symbol=symbol,
+        #     exchange=exchange,
+        #     interval=interval,
+        #     start=start,
+        #     end=end
+        # )
+        #
+        # data = rqdata_client.query_history(req)
+        # return data
 
     def process_tick_event(self, event: Event):
         """"""
@@ -874,6 +874,7 @@ class CtaEngine(BaseEngine):
     def write_log(self, msg: str, strategy: CtaTemplate = None):
         """
         Create cta engine log event.
+        产生CTA引擎日志事件
         """
         if strategy:
             msg = f"{strategy.strategy_name}: {msg}"

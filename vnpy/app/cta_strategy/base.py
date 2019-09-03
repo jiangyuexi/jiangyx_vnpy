@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from vnpy.trader.constant import Direction, Offset
-
+# CTA 策略APP
 APP_NAME = "CtaStrategy"
 STOPORDER_PREFIX = "STOP"
 

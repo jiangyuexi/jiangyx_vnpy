@@ -244,6 +244,7 @@ class CtaTemplate(ABC):
     def put_event(self):
         """
         Put an strategy data event for ui update.
+        把数据数据放给 界面进行更新
         """
         if self.inited:
             self.cta_engine.put_strategy_event(self)

@@ -70,7 +70,7 @@ class CtaEngine(BaseEngine):
     """"""
 
     engine_type = EngineType.LIVE  # live trading engine
-
+    # cta 策略配置文件
     setting_filename = "cta_strategy_setting.json"
     data_filename = "cta_strategy_data.json"
 
@@ -81,8 +81,9 @@ class CtaEngine(BaseEngine):
 
         self.strategy_setting = {}  # strategy_name: dict
         self.strategy_data = {}     # strategy_name: dict
-
+        # 策略类 名字
         self.classes = {}           # class_name: stategy_class
+        # 策略实例 名字
         self.strategies = {}        # strategy_name: strategy
 
         self.symbol_strategy_map = defaultdict(
@@ -572,22 +573,22 @@ class CtaEngine(BaseEngine):
     ):
         """
         Add a new strategy.
+        添加新的策略
         """
         if strategy_name in self.strategies:
             self.write_log(f"创建策略失败，存在重名{strategy_name}")
             return
-
+        # 获取 策略类名
         strategy_class = self.classes[class_name]
+        # 蒋越希修改 支持多个交易品种
 
+        # 构造策略实例
         strategy = strategy_class(self, strategy_name, vt_symbol, setting)
+        # 策略实例名字为Key， 对象为V
         self.strategies[strategy_name] = strategy
-
         # Add vt_symbol to strategy map.
-        strategies = self.symbol_strategy_map[vt_symbol]
+        strategies = self.symbol_strategy_map[str(vt_symbol)]
         strategies.append(strategy)
-
-        # Update to setting file.
-        self.update_strategy_setting(strategy_name, setting)
 
         self.put_strategy_event(strategy)
 
@@ -627,13 +628,15 @@ class CtaEngine(BaseEngine):
                         setattr(strategy, name, value)
 
             # Subscribe market data
-            contract = self.main_engine.get_contract(strategy.vt_symbol)
-            if contract:
-                req = SubscribeRequest(
-                    symbol=contract.symbol, exchange=contract.exchange)
-                self.main_engine.subscribe(req, contract.gateway_name)
-            else:
-                self.write_log(f"行情订阅失败，找不到合约{strategy.vt_symbol}", strategy)
+            vt_symbols = strategy.vt_symbol.split(";")
+            for _vt_symbol in vt_symbols:
+                contract = self.main_engine.get_contract(_vt_symbol)
+                if contract:
+                    req = SubscribeRequest(
+                        symbol=contract.symbol, exchange=contract.exchange)
+                    self.main_engine.subscribe(req, contract.gateway_name)
+                else:
+                    self.write_log(f"行情订阅失败，找不到合约{strategy.vt_symbol}", strategy)
 
             # Put event to update init completed status.
             strategy.inited = True
@@ -820,6 +823,7 @@ class CtaEngine(BaseEngine):
     def load_strategy_setting(self):
         """
         Load setting file.
+        加载配置文件
         """
         self.strategy_setting = load_json(self.setting_filename)
 
@@ -834,6 +838,7 @@ class CtaEngine(BaseEngine):
     def update_strategy_setting(self, strategy_name: str, setting: dict):
         """
         Update setting file.
+        更新配置文件
         """
         strategy = self.strategies[strategy_name]
 

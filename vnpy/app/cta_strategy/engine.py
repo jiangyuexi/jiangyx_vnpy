@@ -582,13 +582,15 @@ class CtaEngine(BaseEngine):
         strategy_class = self.classes[class_name]
         # 蒋越希修改 支持多个交易品种
 
-        # 构造策略实例
         strategy = strategy_class(self, strategy_name, vt_symbol, setting)
-        # 策略实例名字为Key， 对象为V
         self.strategies[strategy_name] = strategy
+
         # Add vt_symbol to strategy map.
-        strategies = self.symbol_strategy_map[str(vt_symbol)]
+        strategies = self.symbol_strategy_map[vt_symbol]
         strategies.append(strategy)
+
+        # Update to setting file.
+        self.update_strategy_setting(strategy_name, setting)
 
         self.put_strategy_event(strategy)
 
@@ -628,15 +630,13 @@ class CtaEngine(BaseEngine):
                         setattr(strategy, name, value)
 
             # Subscribe market data
-            vt_symbols = strategy.vt_symbol.split(";")
-            for _vt_symbol in vt_symbols:
-                contract = self.main_engine.get_contract(_vt_symbol)
-                if contract:
-                    req = SubscribeRequest(
-                        symbol=contract.symbol, exchange=contract.exchange)
-                    self.main_engine.subscribe(req, contract.gateway_name)
-                else:
-                    self.write_log(f"行情订阅失败，找不到合约{strategy.vt_symbol}", strategy)
+            contract = self.main_engine.get_contract(strategy.vt_symbol)
+            if contract:
+                req = SubscribeRequest(
+                    symbol=contract.symbol, exchange=contract.exchange)
+                self.main_engine.subscribe(req, contract.gateway_name)
+            else:
+                self.write_log(f"行情订阅失败，找不到合约{strategy.vt_symbol}", strategy)
 
             # Put event to update init completed status.
             strategy.inited = True

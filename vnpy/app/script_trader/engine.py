@@ -26,8 +26,6 @@ from vnpy.trader.object import (
     LogData,
     BarData
 )
-from vnpy.trader.rqdata import rqdata_client
-
 
 APP_NAME = "ScriptTrader"
 

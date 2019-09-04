@@ -10,8 +10,10 @@ from vnpy.app.cta_strategy import (
 from time import time
 
 
-class TestStrategy(CtaTemplate):
-    """"""
+class SpotFuturesStrategy(CtaTemplate):
+    """
+    现货期货价差套利
+    """
     author = "用Python的交易员"
     # 10个tick才触发
     test_trigger = 10
@@ -25,7 +27,7 @@ class TestStrategy(CtaTemplate):
 
     def __init__(self, cta_engine, strategy_name, vt_symbol, setting):
         """"""
-        super(TestStrategy, self).__init__(
+        super(SpotFuturesStrategy, self).__init__(
             cta_engine, strategy_name, vt_symbol, setting
         )
         # 需要测试的回调函数列表
@@ -60,28 +62,9 @@ class TestStrategy(CtaTemplate):
     def on_tick(self, tick: TickData):
         """
         Callback of new tick data update.
+        新的tick数据到来，更新一次
         """
-        if self.test_all_done:
-            return
-
-        self.last_tick = tick
-
-        self.tick_count += 1
-        if self.tick_count >= self.test_trigger:
-            self.tick_count = 0
-
-            if self.test_funcs:
-                test_func = self.test_funcs.pop(0)
-
-                start = time()
-                test_func()
-                time_cost = (time() - start) * 1000
-                self.write_log("耗时%s毫秒" % (time_cost))
-            else:
-                self.write_log("测试已全部完成")
-                self.test_all_done = True
-
-        self.put_event()
+        self.write_log(tick)
 
     def on_bar(self, bar: BarData):
         """

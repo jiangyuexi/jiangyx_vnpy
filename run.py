@@ -1,5 +1,8 @@
 from vnpy.app.cta_backtester import CtaBacktesterApp
 from vnpy.app.cta_strategy import CtaStrategyApp
+from vnpy.app.risk_manager import RiskManagerApp
+from vnpy.app.rpc_service import RpcServiceApp
+from vnpy.app.script_trader import ScriptTraderApp
 from vnpy.event import EventEngine
 
 from vnpy.trader.engine import MainEngine
@@ -71,6 +74,9 @@ def main():
     main_engine.add_app(CsvLoaderApp)
     main_engine.add_app(AlgoTradingApp)
     main_engine.add_app(DataRecorderApp)
+    main_engine.add_app(RiskManagerApp)
+    main_engine.add_app(ScriptTraderApp)
+    # main_engine.add_app(RpcServiceApp)
 
     main_window = MainWindow(main_engine, event_engine)
     main_window.showMaximized()

@@ -64,15 +64,15 @@ def main():
 
     # main_engine.add_gateway(BitfinexGateway)
     # main_engine.add_gateway(OnetokenGateway)
-    # main_engine.add_gateway(OkexGateway)
+    main_engine.add_gateway(OkexGateway)
     # main_engine.add_gateway(HbdmGateway)
 
     # 把 app 保存到 apps 和 engines 里
     main_engine.add_app(CtaStrategyApp)
-    main_engine.add_app(CtaBacktesterApp)
-    main_engine.add_app(CsvLoaderApp)
-    main_engine.add_app(AlgoTradingApp)
-    main_engine.add_app(DataRecorderApp)
+    # main_engine.add_app(CtaBacktesterApp)
+    # main_engine.add_app(CsvLoaderApp)
+    # main_engine.add_app(AlgoTradingApp)
+    # main_engine.add_app(DataRecorderApp)
 
     # 获取所有交易通道 名字
     gateway_names = main_engine.get_all_gateway_names()
@@ -84,15 +84,17 @@ def main():
         # 配置回测系统
         # backtester = BacktesterManager(main_engine=main_engine, event_engine=event_engine, gateway_name=name)
         # backtester.start_backtesting()
-        # CTA 管理器
-        ctamanager = CtaManager(main_engine=main_engine, event_engine=event_engine)
-        data = {'strategy_name': 'testjiang', 'vt_symbol': 'BTC-USD-190927.OKEX', 'class_name':
-            'TestStrategy', 'author': '用Python的交易员', 'parameters': {'test_trigger': 10},
-                'variables': {'inited': False, 'trading': False, 'pos': 0, 'tick_count': 0, 'test_all_done': False}}
-
-        strategymanager = StrategyManager(cta_manager=ctamanager, cta_engine=ctamanager.cta_engine, data=data)
-        strategymanager.init_strategy()
-        strategymanager.start_strategy()
+    # CTA 管理器
+    ctamanager = CtaManager(main_engine=main_engine, event_engine=event_engine)
+    # data = {'strategy_name': 'testjiang', 'vt_symbol': 'BTC-USD-190927.OKEX', 'class_name':
+    #     'SpotFuturesStrategy', 'author': '用Python的交易员', 'parameters': {'test_trigger': 10},
+    #         'variables': {'inited': False, 'trading': False, 'pos': 0, 'tick_count': 0, 'test_all_done': False}}
+    data = {'strategy_name': 'testjiang', 'vt_symbol': "BTC-USDT.OKEX;BTC-USD-190927.OKEX", 'class_name':
+        'SpotFuturesStrategy', 'author': '用Python的交易员', 'parameters': {'test_trigger': 10},
+            'variables': {'inited': False, 'trading': False, 'pos': 0, 'tick_count': 0, 'test_all_done': False}}
+    strategymanager = StrategyManager(cta_manager=ctamanager, cta_engine=ctamanager.cta_engine, data=data)
+    strategymanager.init_strategy()
+    strategymanager.start_strategy()
 
     while True:
         sleep(100000)

@@ -28,14 +28,16 @@ class TestStrategy(CtaTemplate):
         super(TestStrategy, self).__init__(
             cta_engine, strategy_name, vt_symbol, setting
         )
-
+        # 需要测试的回调函数列表
         self.test_funcs = [
             self.test_market_order,
             self.test_limit_order,
-            self.test_cancel_all,
-            self.test_stop_order
+            self.test_stop_order,
+            self.test_cancel_all
         ]
         self.last_tick = None
+        # 开启交易
+        self.trading = True
 
     def on_init(self):
         """
@@ -107,12 +109,13 @@ class TestStrategy(CtaTemplate):
 
     def test_market_order(self):
         """"""
-        self.buy(self.last_tick.limit_up, 1)
+        r = self.buy(self.last_tick.bid_price_1, 1)
+        print(r)
         self.write_log("执行市价单测试")
 
     def test_limit_order(self):
         """"""
-        self.buy(self.last_tick.limit_down, 1)
+        self.buy(self.last_tick.bid_price_1, 1)
         self.write_log("执行限价单测试")
 
     def test_stop_order(self):

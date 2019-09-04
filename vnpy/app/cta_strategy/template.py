@@ -31,6 +31,7 @@ class CtaTemplate(ABC):
         self.vt_symbol = vt_symbol
 
         self.inited = False
+        # 交易开关
         self.trading = False
         self.pos = 0
 

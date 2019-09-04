@@ -236,10 +236,10 @@ class CtaEngine(BaseEngine):
                 continue
 
             long_triggered = (
-                stop_order.direction == Direction.LONG and tick.last_price >= stop_order.price
+                stop_order.direction == Direction.LONG and tick.last_price >= float(stop_order.price)
             )
             short_triggered = (
-                stop_order.direction == Direction.SHORT and tick.last_price <= stop_order.price
+                stop_order.direction == Direction.SHORT and tick.last_price <= float(stop_order.price)
             )
 
             if long_triggered or short_triggered:

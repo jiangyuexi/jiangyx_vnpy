@@ -113,6 +113,7 @@ class Exchange(Enum):
     # CryptoCurrency  加密货币交易所
     BITMEX = "BITMEX"
     OKEX = "OKEX"
+    ZB = "ZB"
     # 火币
     HUOBI = "HUOBI"
     BITFINEX = "BITFINEX"

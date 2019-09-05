@@ -12,6 +12,7 @@ EVENT_BAR = "eBar."
 EVENT_TRADE = "eTrade."
 EVENT_ORDER = "eOrder."
 EVENT_POSITION = "ePosition."
+# 商品  资金
 EVENT_ACCOUNT = "eAccount."
 # websocket 请求 tick 和bar数据事件
 EVENT_CONTRACT = "eContract."

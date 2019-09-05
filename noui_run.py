@@ -6,6 +6,7 @@ from vnpy.app.cta_strategy import CtaStrategyApp
 from vnpy.app.cta_strategy.ui.no_widget import CtaManager, StrategyManager
 from vnpy.app.data_recorder.ui.no_widget import ConnectNoDialog
 from vnpy.event import EventEngine
+from vnpy.gateway.zb import ZbGateway
 
 from vnpy.trader.engine import MainEngine
 
@@ -51,7 +52,7 @@ def main():
     # main_engine.add_gateway(BitmexGateway)
     # main_engine.add_gateway(TigerGateway)
     # main_engine.add_gateway(OesGateway)
-    main_engine.add_gateway(OkexfGateway)
+    main_engine.add_gateway(ZbGateway)
 
     # 添加火币的交互通道
     # 从json文件加载配置
@@ -64,7 +65,8 @@ def main():
 
     # main_engine.add_gateway(BitfinexGateway)
     # main_engine.add_gateway(OnetokenGateway)
-    main_engine.add_gateway(OkexGateway)
+    # main_engine.add_gateway(OkexGateway)
+    # main_engine.add_gateway(OkexGateway)
     # main_engine.add_gateway(HbdmGateway)
 
     # 把 app 保存到 apps 和 engines 里
@@ -85,16 +87,16 @@ def main():
         # backtester = BacktesterManager(main_engine=main_engine, event_engine=event_engine, gateway_name=name)
         # backtester.start_backtesting()
     # CTA 管理器
-    ctamanager = CtaManager(main_engine=main_engine, event_engine=event_engine)
-    # data = {'strategy_name': 'testjiang', 'vt_symbol': 'BTC-USD-190927.OKEX', 'class_name':
+    # ctamanager = CtaManager(main_engine=main_engine, event_engine=event_engine)
+    # # data = {'strategy_name': 'testjiang', 'vt_symbol': 'BTC-USD-190927.OKEX', 'class_name':
+    # #     'SpotFuturesStrategy', 'author': '用Python的交易员', 'parameters': {'test_trigger': 10},
+    # #         'variables': {'inited': False, 'trading': False, 'pos': 0, 'tick_count': 0, 'test_all_done': False}}
+    # data = {'strategy_name': 'testjiang', 'vt_symbol': "BTC-USDT.OKEX", 'class_name':
     #     'SpotFuturesStrategy', 'author': '用Python的交易员', 'parameters': {'test_trigger': 10},
     #         'variables': {'inited': False, 'trading': False, 'pos': 0, 'tick_count': 0, 'test_all_done': False}}
-    data = {'strategy_name': 'testjiang', 'vt_symbol': "BTC-USDT.OKEX;BTC-USD-190927.OKEX", 'class_name':
-        'SpotFuturesStrategy', 'author': '用Python的交易员', 'parameters': {'test_trigger': 10},
-            'variables': {'inited': False, 'trading': False, 'pos': 0, 'tick_count': 0, 'test_all_done': False}}
-    strategymanager = StrategyManager(cta_manager=ctamanager, cta_engine=ctamanager.cta_engine, data=data)
-    strategymanager.init_strategy()
-    strategymanager.start_strategy()
+    # strategymanager = StrategyManager(cta_manager=ctamanager, cta_engine=ctamanager.cta_engine, data=data)
+    # strategymanager.init_strategy()
+    # strategymanager.start_strategy()
 
     while True:
         sleep(100000)

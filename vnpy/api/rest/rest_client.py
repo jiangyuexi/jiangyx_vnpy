@@ -90,6 +90,7 @@ class RestClient(object):
     def __init__(self):
         """
         """
+        #  url 共同的字符串
         self.url_base = ''  # type: str
         # 本类线程开关
         self._active = False

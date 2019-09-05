@@ -201,10 +201,11 @@ class AccountData(BaseData):
     Account data contains information about balance, frozen and
     available.
     """
-
+    # 商品名
     accountid: str
-
+    # 余额
     balance: float = 0
+    # 冻结资金
     frozen: float = 0
 
     def __post_init__(self):
@@ -237,9 +238,13 @@ class ContractData(BaseData):
     symbol: str
     # 交易所名字
     exchange: Exchange
+    # 合约中文名
     name: str
+    # 合约类型
     product: Product
+    # 合约大小
     size: int
+    # 合约最小价格TICK
     pricetick: float
 
     min_volume: float = 1           # minimum trading volume of the contract

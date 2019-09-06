@@ -13,6 +13,7 @@ import time
 import json
 import struct
 import base64
+import ccxt
 import zlib
 from copy import copy
 from datetime import datetime, timedelta
@@ -50,38 +51,37 @@ from vnpy.trader.object import (
 from vnpy.trader.utility import TimeUtils
 
 REST_HOST_MARKET = "http://api.zb.cn"
-REST_HOST_TRADE = "http://trade.zb.cn"
+REST_HOST_TRADE = "https://trade.zb.cn"
 WEBSOCKET_HOST = "wss://api.zb.cn/websocket"
 
-STATUS_OKEX2VT = {
-    "ordering": Status.SUBMITTING,
-    "open": Status.NOTTRADED,
-    "part_filled": Status.PARTTRADED,
-    "filled": Status.ALLTRADED,
-    "cancelled": Status.CANCELLED,
-    "cancelling": Status.CANCELLED,
-    "failure": Status.REJECTED,
-}
+STATUS_ZB = {
+    0: "待成交/待成交未交易部份",
+    1: Status.CANCELLED,
+    2: Status.ALLTRADED,
+    3: "待成交/待成交未交易部份",
 
-DIRECTION_VT2OKEX = {Direction.LONG: "buy", Direction.SHORT: "sell"}
-DIRECTION_OKEX2VT = {v: k for k, v in DIRECTION_VT2OKEX.items()}
+}
 
 ORDERTYPE_VT2OKEX = {
     OrderType.LIMIT: "limit",
     OrderType.MARKET: "market"
 }
-ORDERTYPE_OKEX2VT = {v: k for k, v in ORDERTYPE_VT2OKEX.items()}
-
-INTERVAL_VT2OKEX = {
-    Interval.MINUTE: "60",
-    Interval.HOUR: "3600",
-    Interval.DAILY: "86400",
+ORDERTYPE_ZB2VT = {
+    1: "buy",
+    0: "sell"
 }
 
+# 把枚举类型和字符串建立字典
+INTERVAL_VT2ZB = {
+    Interval.MINUTE: "1min",
+    Interval.HOUR: "1hour",
+    Interval.DAILY: "1day",
+}
+# 单位 s
 TIMEDELTA_MAP = {
-    Interval.MINUTE: timedelta(minutes=1),
-    Interval.HOUR: timedelta(hours=1),
-    Interval.DAILY: timedelta(days=1),
+    Interval.MINUTE: 60,
+    Interval.HOUR: 3600,
+    Interval.DAILY: 86400,
 }
 # 交易对集合
 instruments = set()
@@ -96,8 +96,8 @@ class ZbGateway(BaseGateway):
     """
     # 配置信息
     default_setting = {
-        "API Key": "4d5fe472-528b-47e4-887b-6e1eb4a948a9",
-        "Secret Key": "db1f23f8-98f1-4d7b-96fa-f031f59080f5",
+        "API Key": "",
+        "Secret Key": "",
         "会话数": 3,
         "代理地址": "",
         "代理端口": "",
@@ -191,15 +191,13 @@ class ZbMarketRestApi(RestClient):
     def __init__(self, gateway: BaseGateway):
         """"""
         super(ZbMarketRestApi, self).__init__()
-
+        # gateway 对象
         self.gateway = gateway
+        # gateway 对象名
         self.gateway_name = gateway.gateway_name
 
         self.key = ""
         self.secret = ""
-
-        self.order_count = 10000
-        self.order_count_lock = Lock()
 
         self.connect_time = 0
 
@@ -224,11 +222,6 @@ class ZbMarketRestApi(RestClient):
         self.query_time()
         # 获取所有交易对
         self.query_contract()
-
-    def _new_order_id(self):
-        with self.order_count_lock:
-            self.order_count += 1
-            return self.order_count
 
     def query_contract(self):
         """
@@ -311,50 +304,45 @@ class ZbMarketRestApi(RestClient):
 
     def query_history(self, req: HistoryRequest):
         """
-        通过 rest 获取历史k线数据
-        :param req: 参数
+        通过 rest 获取最新的历史k线数据 1000条
+        :param req: 历史数据结构体
         :return: 返回历史K线数据
         """
-        """
+
         buf = {}
-        end_time = None
-
+        # datetime 类型
+        tu = TimeUtils()
+        end_time = req.end
+        # 开始时间戳 ms
+        start = tu.convert_datetime2timestamp(req.start) * 1000
+        # 时间间隔
+        _type = INTERVAL_VT2ZB[req.interval]
         for i in range(10):
-            path = f"/api/spot/v3/instruments/{req.symbol}/candles"
-
-            # Create query params
-            params = {
-                "granularity": INTERVAL_VT2OKEX[req.interval]
-            }
-
-            if end_time:
-                end = datetime.strptime(end_time, "%Y-%m-%dT%H:%M:%S.%fZ")
-                start = end - TIMEDELTA_MAP[req.interval] * 200
-
-                params["start"] = start.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-                params["end"] = end.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-
+            # 尝试 10次
+            # 开始时间
+            path = f"/data/v1/kline?market={req.symbol}&type={_type}&since={start}"
+            # K线个数默认1000个
             # Get response from server
             resp = self.request(
                 "GET",
                 path,
-                params=params
             )
 
             # Break if request failed with other status code
+            # 如果 请求失败 跳出循环
             if resp.status_code // 100 != 2:
                 msg = f"获取历史数据失败，状态码：{resp.status_code}，信息：{resp.text}"
                 self.gateway.write_log(msg)
                 break
             else:
-                data = resp.json()
+                data = resp.json()["data"]
                 if not data:
                     msg = f"获取历史数据为空"
                     break
-
+                tu = TimeUtils()
                 for l in data:
                     ts, o, h, l, c, v = l
-                    dt = datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S.%fZ")
+                    dt = tu.convert_datetime(ts/1000)
                     bar = BarData(
                         symbol=req.symbol,
                         exchange=req.exchange,
@@ -368,21 +356,19 @@ class ZbMarketRestApi(RestClient):
                         gateway_name=self.gateway_name
                     )
                     buf[bar.datetime] = bar
-
-                begin = data[-1][0]
-                end = data[0][0]
-                msg = f"获取历史数据成功，{req.symbol} - {req.interval.value}，{begin} - {end}"
+                # 单位  ms
+                begin = data[0][0]
+                end = data[-1][0]
+                msg = f"获取历史数据成功，{req.symbol} - {req.interval.value}，{tu.convert_time(begin/1000)}" \
+                      f" - {tu.convert_time(end/1000)}"
                 self.gateway.write_log(msg)
-
-                # Update start time
-                end_time = begin
+                break
 
         index = list(buf.keys())
         index.sort()
 
         history = [buf[i] for i in index]
         return history
-        """
 
 
 class ZbTradeRestApi(RestClient):
@@ -458,12 +444,7 @@ class ZbTradeRestApi(RestClient):
         self.gateway.write_log("ZB 交易 REST API 启动成功")
 
         self.query_account()
-        # self.query_order()
-
-    def _new_order_id(self):
-        with self.order_count_lock:
-            self.order_count += 1
-            return self.order_count
+        self.query_order(symbol="usdt_qc")
 
     def send_order(self, req: OrderRequest):
         """"""
@@ -519,7 +500,10 @@ class ZbTradeRestApi(RestClient):
         )
 
     def query_account(self):
-        """"""
+        """
+        获取资金
+        :return: 
+        """
         path = self.create_url("/api/getAccountInfo",
                                f"accesskey={self.key}&method=getAccountInfo")
         self.add_request(
@@ -528,13 +512,22 @@ class ZbTradeRestApi(RestClient):
             callback=self.on_query_account
         )
 
-    def query_order(self):
-        """"""
-        self.add_request(
-            "GET",
-            "/api/spot/v3/orders_pending",
-            callback=self.on_query_order
-        )
+    def query_order(self, symbol):
+        """
+        获取所有没有成交的委托 获取10*10
+        :return: 
+        """
+        for i in range(10):
+            sleep(0.01)
+            path = self.create_url("/api/getUnfinishedOrdersIgnoreTradeType",
+                                   f"accesskey={self.key}&currency={symbol}&method=getUnfinishedOrdersIgnoreTradeType&"
+                                   f"pageIndex={i + 1}&pageSize=10")
+
+            self.add_request(
+                "GET",
+                path,
+                callback=self.on_query_order
+            )
 
     def on_query_account(self, data, request):
         """
@@ -556,24 +549,31 @@ class ZbTradeRestApi(RestClient):
         self.gateway.write_log("ZB 账户资金查询成功")
 
     def on_query_order(self, data, request):
-        """"""
+        """
+        查询出所有的 "待成交/待成交未交易部份" 状态的委托
+        :param data: 
+        :param request: 
+        :return: 
+        """
+        if "code" in data:
+            return None
+        tu = TimeUtils()
         for order_data in data:
             order = OrderData(
-                symbol=order_data["instrument_id"],
-                exchange=Exchange.OKEX,
-                type=ORDERTYPE_OKEX2VT[order_data["type"]],
-                orderid=order_data["client_oid"],
-                direction=DIRECTION_OKEX2VT[order_data["side"]],
+                symbol=order_data['currency'],
+                exchange=Exchange.ZB,
+                type=ORDERTYPE_ZB2VT[order_data["type"]],
+                orderid=order_data["id"],
                 price=float(order_data["price"]),
-                volume=float(order_data["size"]),
-                traded=float(order_data["filled_size"]),
-                time=order_data["timestamp"][11:19],
-                status=STATUS_OKEX2VT[order_data["status"]],
+                volume=float(order_data["total_amount"]),
+                traded=float(order_data["trade_amount"]),
+                time=tu.convert_time(order_data["trade_date"]/1000),
+                status=STATUS_ZB[order_data["status"]],
                 gateway_name=self.gateway_name,
             )
             self.gateway.on_order(order)
 
-        self.gateway.write_log("OKEX 委托信息查询成功")
+        self.gateway.write_log("ZB 委托信息查询成功")
 
     def on_send_order_failed(self, status_code: str, request: Request):
         """

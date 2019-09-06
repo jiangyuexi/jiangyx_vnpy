@@ -18,6 +18,9 @@ class StopOrderStatus(Enum):
 
 
 class EngineType(Enum):
+    """
+    引擎的类型 
+    """
     LIVE = "实盘"
     BACKTESTING = "回测"
 

@@ -110,17 +110,24 @@ class OrderData(BaseData):
     of a specific order.
     订单数据结构
     """
-
+    # 交易对
     symbol: str
+    # 交易所
     exchange: Exchange
+    # 订单号
     orderid: str
-
+    # 交易类型  限价 市价
     type: OrderType = OrderType.LIMIT
+    # 方向
     direction: Direction = ""
     offset: Offset = Offset.NONE
+    # 价格
     price: float = 0
+    # 挂单总数量
     volume: float = 0
+    # 已成交数量
     traded: float = 0
+    # 状态
     status: Status = Status.SUBMITTING
     time: str = ""
 
@@ -348,11 +355,15 @@ class HistoryRequest:
     Request sending to specific gateway for querying history data.
     向指定的gateway，请求历史数据
     """
-
+    # 交易对
     symbol: str
+    # 交易所
     exchange: Exchange
+    # 开始时间
     start: datetime
+    # 结束时间
     end: datetime = None
+    # 时间间隔
     interval: Interval = None
 
     def __post_init__(self):

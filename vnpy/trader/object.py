@@ -275,8 +275,9 @@ class SubscribeRequest:
     Request sending to specific gateway for subscribing tick data update.
     请求tick数据
     """
-
+    # 交易对
     symbol: str
+    # 交易所
     exchange: Exchange
 
     def __post_init__(self):
@@ -303,13 +304,19 @@ class OrderRequest:
     """
     Request sending to specific gateway for creating a new order.
     """
-
+    # 交易对
     symbol: str
+    # 交易所
     exchange: Exchange
+    # 方向
     direction: Direction
+    # 下单类型
     type: OrderType
+    # 数量
     volume: float
+    # 价格
     price: float = 0
+
     offset: Offset = Offset.NONE
 
     def __post_init__(self):
@@ -339,9 +346,11 @@ class CancelRequest:
     """
     Request sending to specific gateway for canceling an existing order.
     """
-
+    # 订单号
     orderid: str
+    # 交易对
     symbol: str
+    # 交易所
     exchange: Exchange
 
     def __post_init__(self):

@@ -19,6 +19,7 @@ from copy import copy
 from datetime import datetime, timedelta
 from threading import Lock
 from urllib.parse import urlencode
+
 from gevent import sleep
 
 from requests import ConnectionError
@@ -112,8 +113,8 @@ class ZbGateway(BaseGateway):
         self.rest_market_api = ZbMarketRestApi(self)
         # # 中币交易rest api
         self.rest_trade_api = ZbTradeRestApi(self)
-        # # 中币 websocket api
-        # self.ws_api = ZbWebsocketApi(self)
+        # 中币 websocket api
+        self.ws_api = ZbWebsocketApi(self)
 
         self.orders = {}
 
@@ -134,7 +135,7 @@ class ZbGateway(BaseGateway):
                               session_number, proxy_host, proxy_port)
         self.rest_trade_api.connect(key, secret,
                               session_number, proxy_host, proxy_port)
-        # self.ws_api.connect(key, secret, proxy_host, proxy_port)
+        self.ws_api.connect(key, secret, proxy_host, proxy_port)
 
     def subscribe(self, req: SubscribeRequest):
         """"""
@@ -444,33 +445,47 @@ class ZbTradeRestApi(RestClient):
         self.gateway.write_log("ZB 交易 REST API 启动成功")
 
         self.query_account()
+        # 指定要查询的交易对
         self.query_order(symbol="usdt_qc")
 
+        # 测试接口
+        req = OrderRequest(symbol="usdt_qc", exchange=Exchange.ZB, direction=Direction.LONG, type=OrderType.LIMIT,
+                           volume=0.01)
+        # 价格
+        req.price = 6.9
+        req.offset = Offset.NONE
+        self.send_order(req)
+
+    def _new_order_id(self):
+        with self.order_count_lock:
+            self.order_count += 1
+            return self.order_count
+
     def send_order(self, req: OrderRequest):
-        """"""
+        """
+        发送委托单
+        :param req: 
+        :return: 
+        """
         orderid = f"a{self.connect_time}{self._new_order_id()}"
-
-        data = {
-            "client_oid": orderid,
-            "type": ORDERTYPE_VT2OKEX[req.type],
-            "side": DIRECTION_VT2OKEX[req.direction],
-            "instrument_id": req.symbol
-        }
-
-        if req.type == OrderType.MARKET:
-            if req.direction == Direction.LONG:
-                data["notional"] = req.volume
-            else:
-                data["size"] = req.volume
-        else:
-            data["price"] = req.price
-            data["size"] = req.volume
-
         order = req.create_order_data(orderid, self.gateway_name)
+        tradetype = None
+        if Direction.LONG == req.direction:
+            #     buy
+            tradetype = 1
+        elif Direction.SHORT == req.direction:
+            #     sell
+            tradetype = 0
+        params = 'accesskey=%s&amount=%s&currency=%s&method=order&price=%s&tradeType=%s' % \
+                 (self.key, req.volume, req.symbol, req.price, tradetype)
 
+        path = self.create_url("/api/order",
+                               params)
+
+        data = {}
         self.add_request(
             "POST",
-            "/api/spot/v3/orders",
+            path,
             callback=self.on_send_order,
             data=data,
             extra=order,
@@ -483,14 +498,12 @@ class ZbTradeRestApi(RestClient):
 
     def cancel_order(self, req: CancelRequest):
         """"""
-        data = {
-            "instrument_id": req.symbol,
-            "client_oid": req.orderid
-        }
-
-        path = "/api/spot/v3/cancel_orders/" + req.orderid
+        data = {}
+        params = 'accesskey=%s&currency=%s&id=%s&method=cancelOrder' % (self.key, req.symbol, req.orderid)
+        path = self.create_url("/api/cancelOrder",
+                               params)
         self.add_request(
-            "POST",
+            "GET",
             path,
             callback=self.on_cancel_order,
             data=data,
@@ -604,8 +617,8 @@ class ZbTradeRestApi(RestClient):
         """Websocket will push a new order status"""
         order = request.extra
 
-        error_msg = data["error_message"]
-        if error_msg:
+        code = data["code"]
+        if 1000 != code:
             order.status = Status.REJECTED
             self.gateway.on_order(order)
 
@@ -690,7 +703,7 @@ class ZbWebsocketApi(WebsocketClient):
         self.connect_time = int(datetime.now().strftime("%y%m%d%H%M%S"))
 
         self.init(WEBSOCKET_HOST, proxy_host, proxy_port)
-        # self.start()
+        self.start()
 
     def unpack_data(self, data):
         """"""
@@ -711,15 +724,16 @@ class ZbWebsocketApi(WebsocketClient):
         )
         self.ticks[req.symbol] = tick
         # 现货 ticker数据  和行情深度
-        channel_ticker = f"spot/ticker:{req.symbol}"
-        channel_depth = f"spot/depth5:{req.symbol}"
+        sopt1, sopt2 = req.symbol.split("_")
+        channel_ticker = f'{sopt1}{sopt2}_ticker'
+        channel_depth = f"{sopt1}{sopt2}_depth"
 
         self.callbacks[channel_ticker] = self.on_ticker
         self.callbacks[channel_depth] = self.on_depth
         # websocket 订阅
         req = {
-            "op": "subscribe",
-            "args": [channel_ticker, channel_depth]
+            "event": "addChannel",
+            "channel": [channel_ticker, channel_depth]
         }
         self.send_packet(req)
 
@@ -728,33 +742,35 @@ class ZbWebsocketApi(WebsocketClient):
         Subscribe to bar data upate.
         订阅1 分钟 bar数据来更新
         """
-        min1bar = BarData(
-            symbol=req.symbol,
-            exchange=req.exchange,
-            datetime=datetime.now(),
-            interval=Interval.MINUTE,
-            gateway_name=self.gateway_name,
-        )
-
-        self.bars[req.symbol] = min1bar
-        # 现货 1 分钟 bar
-        channel_1min_bar = f"spot/candle60s:{req.symbol}"
-        self.callbacks[channel_1min_bar] = self.on_1min_bar
-        # websocket 订阅
-        req = {
-            "op": "subscribe",
-            "args": [channel_1min_bar]
-        }
-        self.send_packet(req)
+        # 中币websocket 上没有 获取K线数据的接口
+        # min1bar = BarData(
+        #     symbol=req.symbol,
+        #     exchange=req.exchange,
+        #     datetime=datetime.now(),
+        #     interval=Interval.MINUTE,
+        #     gateway_name=self.gateway_name,
+        # )
+        #
+        # self.bars[req.symbol] = min1bar
+        # sopt1, sopt2 = req.symbol.split("_")
+        # # 现货 1 分钟 bar
+        # channel_1min_bar = f"spot/candle60s:{req.symbol}"
+        # self.callbacks[channel_1min_bar] = self.on_1min_bar
+        # # websocket 订阅
+        # req = {
+        #     "op": "subscribe",
+        #     "args": [channel_1min_bar]
+        # }
+        # self.send_packet(req)
 
     def on_connected(self):
         """"""
-        self.gateway.write_log("OKEX Websocket API连接成功")
+        self.gateway.write_log("ZB Websocket API连接成功")
         self.login()
 
     def on_disconnected(self):
         """"""
-        self.gateway.write_log("OKEX Websocket API连接断开")
+        self.gateway.write_log("ZB Websocket API连接断开")
 
     def on_packet(self, packet: dict):
         """"""
@@ -764,7 +780,7 @@ class ZbWebsocketApi(WebsocketClient):
                 return
             elif event == "error":
                 msg = packet["message"]
-                self.gateway.write_log(f"OKEX  Websocket API请求异常：{msg}")
+                self.gateway.write_log(f"ZB  Websocket API请求异常：{msg}")
             elif event == "login":
                 self.on_login(packet)
         else:
@@ -778,7 +794,7 @@ class ZbWebsocketApi(WebsocketClient):
 
     def on_error(self, exception_type: type, exception_value: Exception, tb):
         """"""
-        msg = f"OKEX 触发异常，状态码：{exception_type}，信息：{exception_value}"
+        msg = f"ZB 触发异常，状态码：{exception_type}，信息：{exception_value}"
         self.gateway.write_log(msg)
 
         sys.stderr.write(self.exception_detail(
@@ -978,6 +994,61 @@ class ZbWebsocketApi(WebsocketClient):
         )
 
         self.gateway.on_account(copy(account))
+
+    # ----------------------------------------------------------------------
+
+    def __fill(self, value, lenght, fillByte):
+        if len(value) >= lenght:
+            return value
+        else:
+            fillSize = lenght - len(value)
+        return value + chr(fillByte) * fillSize
+        # ----------------------------------------------------------------------
+
+
+    def __doXOr(self, s, value):
+        slist = list(s)
+        for index in range(len(slist)):
+            slist[index] = chr(ord(slist[index]) ^ value)
+        return "".join(slist)
+    # ----------------------------------------------------------------------
+
+    def __hmacSign(self, aValue, aKey):
+        keyb = struct.pack("%ds" % len(aKey), aKey)
+        value = struct.pack("%ds" % len(aValue), aValue)
+        k_ipad = self.__doXOr(keyb, 0x36)
+        k_opad = self.__doXOr(keyb, 0x5c)
+        k_ipad = self.__fill(k_ipad, 64, 54)
+        k_opad = self.__fill(k_opad, 64, 92)
+        m = hashlib.md5()
+        m.update(k_ipad)
+        m.update(value)
+        dg = m.digest()
+
+        m = hashlib.md5()
+        m.update(k_opad)
+        subStr = dg[0:16]
+        m.update(subStr)
+        dg = m.hexdigest()
+        return dg
+
+        # ----------------------------------------------------------------------
+
+    def __digest(self, aValue):
+        value = struct.pack("%ds" % len(aValue), aValue)
+        h = sha.new()
+        h.update(value)
+        dg = h.hexdigest()
+        return dg
+
+        # ----------------------------------------------------------------------
+
+    def generateSign(self, params):
+        # 参数按照ASCII值排序: {"accesskey":"ce2a18e0-dshs-4c44-4515-9aca67dd706e","amount":"0.001","channel":"usdtqc_order","event":"addChannel","no":"test001","price":"1.0","tradeType":"1"}
+        # secretKey 加密后:86429c69799d3d6ac5da5c2c514baa874d75a4ba
+        SHA_secret = self.__digest(self.secretKey)
+        # 计算出sign: 6b9cd4aaee79a6b74fffa49146ae8879
+        return self.__hmacSign(paramsStr, SHA_secret)
 
 
 def fill(value, lenght, fill_byte):

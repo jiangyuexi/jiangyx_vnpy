@@ -282,7 +282,7 @@ class OkexRestApi(RestClient):
             callback=self.on_send_order,
             data=data,
             extra=order,
-            on_failed=self.on_send_order_failed,
+            on_failed=self.on_send_o.rder_failed,
             on_error=self.on_send_order_error,
         )
 

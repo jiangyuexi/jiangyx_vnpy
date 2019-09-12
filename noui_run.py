@@ -6,7 +6,7 @@ from vnpy.app.cta_strategy import CtaStrategyApp
 from vnpy.app.cta_strategy.ui.no_widget import CtaManager, StrategyManager
 from vnpy.app.data_recorder.ui.no_widget import ConnectNoDialog
 from vnpy.event import EventEngine
-from vnpy.gateway.zb import ZbGateway
+# from vnpy.gateway.zb import ZbGateway
 
 from vnpy.trader.engine import MainEngine
 
@@ -52,7 +52,7 @@ def main():
     # main_engine.add_gateway(BitmexGateway)
     # main_engine.add_gateway(TigerGateway)
     # main_engine.add_gateway(OesGateway)
-    main_engine.add_gateway(ZbGateway)
+    # main_engine.add_gateway(ZbGateway)
 
     # 添加火币的交互通道
     # 从json文件加载配置
@@ -65,12 +65,12 @@ def main():
 
     # main_engine.add_gateway(BitfinexGateway)
     # main_engine.add_gateway(OnetokenGateway)
-    # main_engine.add_gateway(OkexGateway)
-    # main_engine.add_gateway(OkexGateway)
+    main_engine.add_gateway(OkexGateway)
+    main_engine.add_gateway(OkexfGateway)
     # main_engine.add_gateway(HbdmGateway)
 
     # 把 app 保存到 apps 和 engines 里
-    main_engine.add_app(CtaStrategyApp)
+    # main_engine.add_app(CtaStrategyApp)
     # main_engine.add_app(CtaBacktesterApp)
     # main_engine.add_app(CsvLoaderApp)
     # main_engine.add_app(AlgoTradingApp)
@@ -83,7 +83,7 @@ def main():
         connect = ConnectNoDialog(main_engine=main_engine, gateway_name=name)
         connect.connect()
         sleep(1)
-        # 配置回测系统
+        # # 配置回测系统
         # backtester = BacktesterManager(main_engine=main_engine, event_engine=event_engine, gateway_name=name)
         # backtester.start_backtesting()
     # CTA 管理器

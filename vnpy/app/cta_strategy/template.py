@@ -10,7 +10,9 @@ from .base import StopOrder, EngineType
 
 
 class CtaTemplate(ABC):
-    """"""
+    """
+    CTA 策略模板
+    """
     # 作者
     author = ""
     # 交易策略 参数配置， 参数的名称 str
@@ -33,8 +35,12 @@ class CtaTemplate(ABC):
         self.inited = False
         # 交易开关
         self.trading = False
+        # 持仓 正数多仓  负数 空仓
         self.pos = 0
 
+        # Copy a new variables list here to avoid duplicate insert when multiple 
+        # strategy instances are created with the same strategy class.
+        self.variables = copy(self.variables)
         self.variables.insert(0, "inited")
         self.variables.insert(1, "trading")
         self.variables.insert(2, "pos")
@@ -160,7 +166,7 @@ class CtaTemplate(ABC):
     def buy(self, price: float, volume: float, stop: bool = False, lock: bool = False):
         """
         Send buy order to open a long position.
-        买入开仓
+        买入开仓(看涨)
         """
         return self.send_order(Direction.LONG, Offset.OPEN, price, volume, stop, lock)
 
@@ -174,7 +180,7 @@ class CtaTemplate(ABC):
     def short(self, price: float, volume: float, stop: bool = False, lock: bool = False):
         """
         Send short order to open as short position.
-        卖出开仓
+        卖出开仓（看跌）做空
         """
         return self.send_order(Direction.SHORT, Offset.OPEN, price, volume, stop, lock)
 

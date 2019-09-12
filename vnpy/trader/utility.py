@@ -249,7 +249,15 @@ class BarGenerator(ToString):
         on_window_bar: Callable = None,
         interval: Interval = Interval.MINUTE
     ):
-        """Constructor"""
+        """
+         Constructor
+         先调用 on_bar，然后调用 on_window_bar
+        
+        :param on_bar:  更新 bar
+        :param window: window 个 bar
+        :param on_window_bar: 合成bar的函数
+        :param interval: bar的单位
+        """
         self.bar = None
         self.on_bar = on_bar
 
@@ -258,6 +266,7 @@ class BarGenerator(ToString):
 
         self.window = window
         self.window_bar = None
+        # 合成 K线的回调函数
         self.on_window_bar = on_window_bar
 
         self.last_tick = None
@@ -266,19 +275,27 @@ class BarGenerator(ToString):
     def update_tick(self, tick: TickData):
         """
         Update new tick data into generator.
+        把新的tick数据更新到生成器
         """
+        # flag 是否是新的一分钟
         new_minute = False
 
         # Filter tick data with 0 last price
+        # 过滤掉 最新价格为0的数据
         if not tick.last_price:
             return
 
         if not self.bar:
+            # bar里为空，那么是新的min
             new_minute = True
         elif self.bar.datetime.minute != tick.datetime.minute:
+        # 调整 时间窗口，避开高峰时间 蒋越希  修改 2019年9月11日11:03:31
+        # elif (tick.datetime.second >= 50) and (self.last_tick.datetime.second < 50):
+            # 判断是否走完当前分钟
             self.bar.datetime = self.bar.datetime.replace(
                 second=0, microsecond=0
             )
+            # 把老的bar更新一下，开启新的一分钟
             self.on_bar(self.bar)
 
             new_minute = True
@@ -295,6 +312,7 @@ class BarGenerator(ToString):
                 high_price=tick.last_price,
                 low_price=tick.last_price,
                 close_price=tick.last_price,
+                open_interest=tick.open_interest
             )
         else:
             # 高 price
@@ -303,10 +321,12 @@ class BarGenerator(ToString):
             self.bar.low_price = min(self.bar.low_price, tick.last_price)
             # 收 price
             self.bar.close_price = tick.last_price
-            # 时间
+            # 当前持仓量
+            self.bar.open_interest = tick.open_interest
             self.bar.datetime = tick.datetime
 
         if self.last_tick:
+            # 统计出bar里的成交量
             volume_change = tick.volume - self.last_tick.volume
             self.bar.volume += max(volume_change, 0)
 
@@ -343,6 +363,7 @@ class BarGenerator(ToString):
         # Update close price/volume into window bar
         self.window_bar.close_price = bar.close_price
         self.window_bar.volume += int(bar.volume)
+        self.window_bar.open_interest = bar.open_interest
 
         # Check if window bar completed
         finished = False
@@ -375,6 +396,9 @@ class BarGenerator(ToString):
         """
         Generate the bar data and call callback immediately.
         """
+        self.bar.datetime = self.bar.datetime.replace(
+            second=0, microsecond=0
+        )
         self.on_bar(self.bar)
         self.bar = None
 
@@ -390,10 +414,13 @@ class ArrayManager(object):
 
     def __init__(self, size=100):
         """Constructor"""
+        # 推送进来的k线个数
         self.count = 0
+        # 数据容器的大小
         self.size = size
+        # 如果没有达到size大小，计算是没有意义的，不进行计算，一旦达到size大小，则开始计算
         self.inited = False
-
+        # 使用numpy ,速度比list提升10以上
         self.open_array = np.zeros(size)
         self.high_array = np.zeros(size)
         self.low_array = np.zeros(size)
@@ -405,16 +432,17 @@ class ArrayManager(object):
         Update new bar data into array manager.
         添加一个新的bar 数据到 am
         """
+        # 统计推送进来的k线个数
         self.count += 1
         if not self.inited and self.count >= self.size:
             self.inited = True
-
+        # 1把老数据丢掉，2数组向左平移一个，
         self.open_array[:-1] = self.open_array[1:]
         self.high_array[:-1] = self.high_array[1:]
         self.low_array[:-1] = self.low_array[1:]
         self.close_array[:-1] = self.close_array[1:]
         self.volume_array[:-1] = self.volume_array[1:]
-
+        # 3倒数第一个填充新的数据
         self.open_array[-1] = bar.open_price
         self.high_array[-1] = bar.high_price
         self.low_array[-1] = bar.low_price
@@ -425,6 +453,7 @@ class ArrayManager(object):
     def open(self):
         """
         Get open price time series.
+        获取到 open 数据序列
         """
         return self.open_array
 
@@ -432,6 +461,7 @@ class ArrayManager(object):
     def high(self):
         """
         Get high price time series.
+        获取到 high 数据序列
         """
         return self.high_array
 
@@ -439,6 +469,7 @@ class ArrayManager(object):
     def low(self):
         """
         Get low price time series.
+        获取到 low 数据序列
         """
         return self.low_array
 
@@ -446,6 +477,7 @@ class ArrayManager(object):
     def close(self):
         """
         Get close price time series.
+        获取到 close 数据序列
         """
         return self.close_array
 
@@ -453,12 +485,15 @@ class ArrayManager(object):
     def volume(self):
         """
         Get trading volume time series.
+        获取到 交易量 数据序列
         """
         return self.volume_array
 
     def sma(self, n, array=False):
         """
         Simple moving average.
+        简单移动均线  n是窗口
+        array  False 返回最后一个数据， True 返回数组
         """
         result = talib.SMA(self.close, n)
         if array:
@@ -468,6 +503,8 @@ class ArrayManager(object):
     def std(self, n, array=False):
         """
         Standard deviation
+        标准差 n是窗口
+        array  False 返回最后一个数据， True 返回数组
         """
         result = talib.STDDEV(self.close, n)
         if array:
@@ -477,6 +514,8 @@ class ArrayManager(object):
     def cci(self, n, array=False):
         """
         Commodity Channel Index (CCI).
+        n是窗口
+        array  False 返回最后一个数据， True 返回数组
         """
         result = talib.CCI(self.high, self.low, self.close, n)
         if array:
@@ -486,7 +525,8 @@ class ArrayManager(object):
     def atr(self, n, array=False):
         """
         Average True Range (ATR).
-        计算 ATR
+        计算 ATR  n是窗口
+        array  False 返回最后一个数据， True 返回数组
         """
         result = talib.ATR(self.high, self.low, self.close, n)
         if array:
@@ -496,6 +536,8 @@ class ArrayManager(object):
     def rsi(self, n, array=False):
         """
         Relative Strenght Index (RSI).
+        n是窗口
+        array  False 返回最后一个数据， True 返回数组
         """
         result = talib.RSI(self.close, n)
         if array:

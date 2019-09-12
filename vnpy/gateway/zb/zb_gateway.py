@@ -5,7 +5,7 @@
 # @File    : zb_gateway.py
 # @Software: PyCharm
 # encoding: UTF-8
-
+import sha
 import hashlib
 import hmac
 import sys
@@ -804,10 +804,8 @@ class ZbWebsocketApi(WebsocketClient):
         """
         Need to login befores subscribe to websocket topic.
         """
-        timestamp = str(time.time())
-
-        msg = timestamp + 'GET' + '/users/self/verify'
-        signature = generate_signature(msg, self.secret)
+        params =""
+        signature = self.generateSign(params=params)
 
         req = {
             "op": "login",
@@ -996,23 +994,21 @@ class ZbWebsocketApi(WebsocketClient):
         self.gateway.on_account(copy(account))
 
     # ----------------------------------------------------------------------
-
     def __fill(self, value, lenght, fillByte):
         if len(value) >= lenght:
             return value
         else:
             fillSize = lenght - len(value)
         return value + chr(fillByte) * fillSize
-        # ----------------------------------------------------------------------
 
-
+    # ----------------------------------------------------------------------
     def __doXOr(self, s, value):
         slist = list(s)
         for index in range(len(slist)):
             slist[index] = chr(ord(slist[index]) ^ value)
         return "".join(slist)
-    # ----------------------------------------------------------------------
 
+    # ----------------------------------------------------------------------
     def __hmacSign(self, aValue, aKey):
         keyb = struct.pack("%ds" % len(aKey), aKey)
         value = struct.pack("%ds" % len(aValue), aValue)
@@ -1048,7 +1044,7 @@ class ZbWebsocketApi(WebsocketClient):
         # secretKey 加密后:86429c69799d3d6ac5da5c2c514baa874d75a4ba
         SHA_secret = self.__digest(self.secretKey)
         # 计算出sign: 6b9cd4aaee79a6b74fffa49146ae8879
-        return self.__hmacSign(paramsStr, SHA_secret)
+        return self.__hmacSign(str(params), SHA_secret)
 
 
 def fill(value, lenght, fill_byte):

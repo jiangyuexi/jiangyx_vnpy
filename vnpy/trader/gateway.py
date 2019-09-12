@@ -19,8 +19,7 @@ from .event import (
     EVENT_POSITION,
     EVENT_ACCOUNT,
     EVENT_CONTRACT,
-    EVENT_LOG,
-    EVENT_BAR)
+    EVENT_LOG)
 from .object import (
     TickData,
     OrderData,
@@ -200,12 +199,12 @@ class BaseGateway(ABC):
         """
         pass
 
-    @abstractmethod
-    def subscribe1min(self, req: SubscribeRequest1Min):
-        """
-        Subscribe 1min bar data update.
-        """
-        pass
+    # @abstractmethod
+    # def subscribe1min(self, req: SubscribeRequest1Min):
+    #     """
+    #     Subscribe 1min bar data update.
+    #     """
+    #     pass
 
     @abstractmethod
     def send_order(self, req: OrderRequest) -> str:

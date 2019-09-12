@@ -183,14 +183,14 @@ class MainEngine:
         if gateway:
             gateway.subscribe(req)
 
-    def subscribe1min(self, req: SubscribeRequest1Min, gateway_name: str):
-        """
-        Subscribe 1 min bar data update of a specific gateway.
-        从指定的gateway 订阅1 min bar数据
-        """
-        gateway = self.get_gateway(gateway_name)
-        if gateway:
-            gateway.subscribe1min(req)
+    # def subscribe1min(self, req: SubscribeRequest1Min, gateway_name: str):
+    #     """
+    #     Subscribe 1 min bar data update of a specific gateway.
+    #     从指定的gateway 订阅1 min bar数据
+    #     """
+    #     gateway = self.get_gateway(gateway_name)
+    #     if gateway:
+    #         gateway.subscribe1min(req)
 
     def send_order(self, req: OrderRequest, gateway_name: str):
         """

@@ -195,7 +195,7 @@ class WebsocketClient(object):
                         text = ws.recv()
 
                         # ws object is closed when recv function is blocking
-                        # 当recv函数阻塞时，关闭ws对象
+                        # 如果收到的数据为空，重新连接
                         if not text:
                             self._reconnect()
                             continue

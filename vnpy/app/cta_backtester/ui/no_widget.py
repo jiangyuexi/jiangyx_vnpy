@@ -101,7 +101,7 @@ class BacktesterManager(object):
         vt_symbol = "EOS-USDT.OKEX"
         interval = Interval.MINUTE
         start = datetime.datetime.strptime("2019-08-18", '%Y-%m-%d')
-        end = datetime.datetime.strptime("2019-09-03", '%Y-%m-%d')
+        end = datetime.datetime.strptime("2019-09-09", '%Y-%m-%d')
         # 手续费
         rate = float(0.00001)
         # 滑点

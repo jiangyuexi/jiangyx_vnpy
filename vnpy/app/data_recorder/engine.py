@@ -15,7 +15,7 @@ from vnpy.trader.object import (
     BarData,
     ContractData,
     HistoryRequest)
-from vnpy.trader.event import EVENT_TICK, EVENT_CONTRACT, EVENT_BAR
+from vnpy.trader.event import EVENT_TICK, EVENT_CONTRACT
 from vnpy.trader.utility import load_json, save_json, BarGenerator, extract_vt_symbol, TimeUtils
 from vnpy.trader.database import database_manager
 
@@ -220,8 +220,8 @@ class RecorderEngine(BaseEngine):
         """
         # tick 数据事件， 把数据存入数据库
         self.event_engine.register(EVENT_TICK, self.process_tick_event)
-        # bar 数据数据， 把bar数据存入数据库
-        self.event_engine.register(EVENT_BAR, self.process_bar_event)
+        # # bar 数据数据， 把bar数据存入数据库
+        # self.event_engine.register(EVENT_BAR, self.process_bar_event)
         # 订阅tick数据 和 bar 1min 数据， rest 请求 bar 1min 历史数据
         self.event_engine.register(EVENT_CONTRACT, self.process_contract_event)
 
@@ -238,11 +238,11 @@ class RecorderEngine(BaseEngine):
             # 如果tick的符号在 tick_recordings里，则存入数据库
             self.record_tick(tick)
 
-        # if tick.vt_symbol in self.bar_recordings:
-        #     # 如果tick的符号在 bar_recordings里，则根据tick数据生成bar数据，但是这并不准确
-        #     bg = self.get_bar_generator(tick.vt_symbol)
-        #     # 这里存入数据库了吗？？
-        #     bg.update_tick(tick)
+        if tick.vt_symbol in self.bar_recordings:
+            # 如果tick的符号在 bar_recordings里，则根据tick数据生成bar数据，但是这并不准确
+            bg = self.get_bar_generator(tick.vt_symbol)
+            # 这里存入数据库了吗？？
+            bg.update_tick(tick)
 
     def process_bar_event(self, event: Event):
         """
@@ -273,9 +273,9 @@ class RecorderEngine(BaseEngine):
             # 如果交易对符号在tick_recordings，则订阅tick 数据
             self.subscribe(contract)
 
-        if vt_symbol in self.bar_recordings:
-            # 如果交易对符号在bar_recordings，则订阅bar 数据
-            self.subscribe1min(contract)
+        # if vt_symbol in self.bar_recordings:
+        #     # 如果交易对符号在bar_recordings，则订阅bar 数据
+        #     self.subscribe1min(contract)
 
     def write_log(self, msg: str):
         """
@@ -360,16 +360,16 @@ class RecorderEngine(BaseEngine):
         # 从指定的gateway 订阅tick数据
         self.main_engine.subscribe(req, contract.gateway_name)
 
-    def subscribe1min(self, contract: ContractData):
-        """
-        订阅数据 1min bar 数据
-        :param contract: 
-        :return: 
-        """
-        req = SubscribeRequest1Min(
-            symbol=contract.symbol,
-            exchange=contract.exchange
-        )
-        # 从指定的gateway 订阅 1min bar数据
-        self.main_engine.subscribe1min(req, contract.gateway_name)
+    # def subscribe1min(self, contract: ContractData):
+    #     """
+    #     订阅数据 1min bar 数据
+    #     :param contract:
+    #     :return:
+    #     """
+    #     req = SubscribeRequest1Min(
+    #         symbol=contract.symbol,
+    #         exchange=contract.exchange
+    #     )
+    #     # 从指定的gateway 订阅 1min bar数据
+    #     self.main_engine.subscribe1min(req, contract.gateway_name)
 

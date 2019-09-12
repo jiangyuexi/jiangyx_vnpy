@@ -8,7 +8,7 @@ from vnpy.event import EVENT_TIMER  # noqa
 # websocket   tick数据存入数据库事件
 EVENT_TICK = "eTick."
 # jiangyx  add  websocket  bar数据存入数据库事件
-EVENT_BAR = "eBar."
+# EVENT_BAR = "eBar."
 # 交易
 EVENT_TRADE = "eTrade."
 # 委托单

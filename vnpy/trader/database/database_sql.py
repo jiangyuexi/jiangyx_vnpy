@@ -80,6 +80,7 @@ def init_models(db: Database, driver: Driver):
         interval: str = CharField()
 
         volume: float = FloatField()
+        open_interest: float = FloatField()
         open_price: float = FloatField()
         high_price: float = FloatField()
         low_price: float = FloatField()
@@ -101,6 +102,7 @@ def init_models(db: Database, driver: Driver):
             db_bar.datetime = bar.datetime
             db_bar.interval = bar.interval.value
             db_bar.volume = bar.volume
+            db_bar.open_interest = bar.open_interest
             db_bar.open_price = bar.open_price
             db_bar.high_price = bar.high_price
             db_bar.low_price = bar.low_price
@@ -121,6 +123,7 @@ def init_models(db: Database, driver: Driver):
                 volume=self.volume,
                 open_price=self.open_price,
                 high_price=self.high_price,
+                open_interest=self.open_interest,
                 low_price=self.low_price,
                 close_price=self.close_price,
                 gateway_name="DB",
@@ -171,6 +174,8 @@ def init_models(db: Database, driver: Driver):
         name: str = CharField()
         # 按交易货币统计
         volume: float = FloatField()
+        # 持仓量
+        open_interest: float = FloatField()
         # 最新成交价
         last_price: float = FloatField()
         # 最新成交量
@@ -227,10 +232,11 @@ def init_models(db: Database, driver: Driver):
 
             db_tick.symbol = tick.symbol
             db_tick.exchange = tick.exchange.value
-            db_tick.timestamp = tick.timestamp
+            # db_tick.timestamp = tick.timestamp
             db_tick.datetime = tick.datetime
             db_tick.name = tick.name
             db_tick.volume = tick.volume
+            db_tick.open_interest = tick.open_interest
             db_tick.last_price = tick.last_price
             db_tick.last_volume = tick.last_volume
             db_tick.limit_up = tick.limit_up
@@ -276,10 +282,11 @@ def init_models(db: Database, driver: Driver):
             tick = TickData(
                 symbol=self.symbol,
                 exchange=Exchange(self.exchange),
-                timestamp=self.timestamp,
+                # timestamp=self.timestamp,
                 datetime=self.datetime,
                 name=self.name,
                 volume=self.volume,
+                open_interest=self.open_interest,
                 last_price=self.last_price,
                 last_volume=self.last_volume,
                 limit_up=self.limit_up,
@@ -341,8 +348,8 @@ def init_models(db: Database, driver: Driver):
 
     db.connect()
     # 如何在这里指定数据库表名， 或者根据日期新建数据库，每个数据库的表一致。
-    DbBarData._meta.table_name = "DbBarData"
-    DbTickData._meta.table_name = "DbTickData"
+    # DbBarData._meta.table_name = "DbBarData"
+    # DbTickData._meta.table_name = "DbTickData"
 
     # DbBarData._meta.table_name = "DbBarData" + str(datetime.date.today()) + \
     #                              str(time.strftime('%H', time.localtime()))

@@ -36,11 +36,12 @@ class TickData(BaseData):
 
     symbol: str
     exchange: Exchange
-    timestamp: float
+    # timestamp: float
     datetime: datetime
 
     name: str = ""
     volume: float = 0
+    open_interest: float = 0
     last_price: float = 0
     last_volume: float = 0
     limit_up: float = 0
@@ -93,6 +94,8 @@ class BarData(BaseData):
 
     interval: Interval = None
     volume: float = 0
+    # 持仓量
+    open_interest: float = 0
     open_price: float = 0
     high_price: float = 0
     low_price: float = 0

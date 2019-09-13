@@ -608,9 +608,11 @@ class OkexfWebsocketApi(WebsocketClient):
 
         self.trade_count = 10000
         self.connect_time = 0
-
+        # 注册回调函数
         self.callbacks = {}
         self.ticks = {}
+        # 1min k 线数据
+        self.bars = {}
 
     def connect(
         self,
@@ -645,7 +647,17 @@ class OkexfWebsocketApi(WebsocketClient):
             datetime=datetime.now(),
             gateway_name=self.gateway_name,
         )
+
+        bar = BarData(
+            symbol=req.symbol,
+            exchange=req.exchange,
+            datetime=0.0,
+            interval=Interval.MINUTE,
+            gateway_name=self.gateway_name
+        )
+
         self.ticks[req.symbol] = tick
+        self.bars[req.symbol] = bar
         # 订阅tick数据和市场深度
         channel_ticker = f"futures/ticker:{req.symbol}"
         channel_depth = f"futures/depth5:{req.symbol}"
@@ -653,11 +665,11 @@ class OkexfWebsocketApi(WebsocketClient):
         channel_1m_candle = f"futures/candle60s:{req.symbol}"
         self.callbacks[channel_ticker] = self.on_ticker
         self.callbacks[channel_depth] = self.on_depth
-        self.callbacks[channel_1m_candle] = self.on_1m_candle
+        # self.callbacks[channel_1m_candle] = self.on_1m_candle
 
         req = {
             "op": "subscribe",
-            "args": [channel_ticker, channel_depth, channel_1m_candle]
+            "args": [channel_ticker, channel_depth]
         }
         self.send_packet(req)
 
@@ -724,7 +736,7 @@ class OkexfWebsocketApi(WebsocketClient):
         """
         self.callbacks["futures/ticker"] = self.on_ticker
         self.callbacks["futures/depth5"] = self.on_depth
-        self.callbacks["futures/candle60s"] = self.on_1m_candle
+        # self.callbacks["futures/candle60s"] = self.on_1m_candle
         self.callbacks["futures/account"] = self.on_account
         self.callbacks["futures/order"] = self.on_order
         self.callbacks["futures/position"] = self.on_position
@@ -808,7 +820,7 @@ class OkexfWebsocketApi(WebsocketClient):
         :return: 
         """
         symbol = d["instrument_id"]
-        print("OKEXF 合约 on_depth", symbol)
+        # print("OKEXF 合约 on_depth", symbol)
         tick = self.ticks.get(symbol, None)
         if not tick:
             return
@@ -835,7 +847,20 @@ class OkexfWebsocketApi(WebsocketClient):
         :param d: 
         :return: 
         """
-        print("OKEXF 合约 on_1m_candle", d)
+        symbol = d["instrument_id"]
+        bar = self.bars.get(symbol, None)
+        if not bar:
+            return
+
+        bar.datetime = utc_to_local(d["candle"][0])
+        # 按币折算的交易量
+
+        bar.open_price = d["candle"][1]
+        bar.high_price = d["candle"][2]
+        bar.low_price = d["candle"][3]
+        bar.close_price = d["candle"][4]
+        bar.volume = d["candle"][6]
+        # self.gateway.on_tick(copy(bar))
 
     def on_order(self, d):
         """"""

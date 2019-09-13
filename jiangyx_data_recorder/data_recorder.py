@@ -39,13 +39,13 @@ def main():
     main_engine = MainEngine(event_engine)
 
     # 添加火币的交互通道
-    # main_engine.add_gateway(HuobiGateway)
+    main_engine.add_gateway(HuobiGateway)
     sleep(1)
     # main_engine.add_gateway(BitfinexGateway)
     # main_engine.add_gateway(OnetokenGateway)
-    main_engine.add_gateway(OkexGateway)
+    # main_engine.add_gateway(OkexGateway)
     sleep(1)
-    main_engine.add_gateway(OkexfGateway)
+    # main_engine.add_gateway(OkexfGateway)
     sleep(1)
     # main_engine.add_gateway(HbdmGateway)
     sleep(1)

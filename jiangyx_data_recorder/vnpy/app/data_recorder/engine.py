@@ -36,10 +36,11 @@ class RecorderEngine(BaseEngine):
         self.queue = Queue()
         self.thread = Thread(target=self.run)
         self.active = False
-        # tick数据
+        # tick数据  需要记录的tick数据
         self.tick_recordings = {}
-        # bar 数据
+        # bar 数据 需要记录的bar数据
         self.bar_recordings = {}
+        # 生成bar数据
         self.bar_generators = {}
         # 加载 "data_recorder_setting.json"
         self.load_setting()
@@ -50,6 +51,7 @@ class RecorderEngine(BaseEngine):
 
     def load_setting(self):
         """"""
+        # 从配置文件加载配置
         setting = load_json(self.setting_filename)
         self.tick_recordings = setting.get("tick", {})
         self.bar_recordings = setting.get("bar", {})
@@ -103,7 +105,7 @@ class RecorderEngine(BaseEngine):
 
     def process_tick_event(self, event: Event):
         """
-        事件函数
+        事件函数 出来tick数据
         :param event: 
         :return: 
         """

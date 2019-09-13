@@ -116,7 +116,9 @@ class BarGenerator:
     """
     For: 
     1. generating 1 minute bar data from tick data
+    生成1min bar数据从tick数据
     2. generateing x minute bar/x hour bar data from 1 minute data
+    生成xmin bar/x 小时 bar 从1分钟数据
 
     Notice:
     1. for x minute bar, x must be able to divide 60: 2, 3, 5, 6, 10, 15, 20, 30

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from vnpy.trader.constant import Direction, Offset
-
+# CTA 策略APP
 APP_NAME = "CtaStrategy"
 STOPORDER_PREFIX = "STOP"
 
@@ -18,6 +18,9 @@ class StopOrderStatus(Enum):
 
 
 class EngineType(Enum):
+    """
+    引擎的类型 
+    """
     LIVE = "实盘"
     BACKTESTING = "回测"
 
@@ -40,7 +43,9 @@ class StopOrder:
     vt_orderids: list = field(default_factory=list)
     status: StopOrderStatus = StopOrderStatus.WAITING
 
-
+# CTA 日志事件
 EVENT_CTA_LOG = "eCtaLog"
+# CTA 策略事件
 EVENT_CTA_STRATEGY = "eCtaStrategy"
+# CTA 止损单
 EVENT_CTA_STOPORDER = "eCtaStopOrder"

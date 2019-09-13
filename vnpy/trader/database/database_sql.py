@@ -1,5 +1,7 @@
 """"""
 from datetime import datetime
+import datetime
+import time
 from typing import List, Optional, Sequence, Type
 
 from peewee import (
@@ -17,8 +19,9 @@ from peewee import (
 )
 
 from vnpy.trader.constant import Exchange, Interval
+
 from vnpy.trader.object import BarData, TickData
-from vnpy.trader.utility import get_file_path
+from vnpy.trader.utility import get_file_path, TimeUtils
 from .database import BaseDatabaseManager, Driver
 
 
@@ -33,7 +36,8 @@ def init(driver: Driver, settings: dict):
 
     db = init_funcs[driver](settings)
     bar, tick = init_models(db, driver)
-    return SqlManager(bar, tick)
+    # 返回数据库对象，和数据库管理器
+    return db, SqlManager(bar, tick)
 
 
 def init_sqlite(settings: dict):
@@ -76,6 +80,7 @@ def init_models(db: Database, driver: Driver):
         interval: str = CharField()
 
         volume: float = FloatField()
+        open_interest: float = FloatField()
         open_price: float = FloatField()
         high_price: float = FloatField()
         low_price: float = FloatField()
@@ -97,6 +102,7 @@ def init_models(db: Database, driver: Driver):
             db_bar.datetime = bar.datetime
             db_bar.interval = bar.interval.value
             db_bar.volume = bar.volume
+            db_bar.open_interest = bar.open_interest
             db_bar.open_price = bar.open_price
             db_bar.high_price = bar.high_price
             db_bar.low_price = bar.low_price
@@ -107,6 +113,7 @@ def init_models(db: Database, driver: Driver):
         def to_bar(self):
             """
             Generate BarData object from DbBarData.
+            从DbBarData中生成BarData对象
             """
             bar = BarData(
                 symbol=self.symbol,
@@ -116,6 +123,7 @@ def init_models(db: Database, driver: Driver):
                 volume=self.volume,
                 open_price=self.open_price,
                 high_price=self.high_price,
+                open_interest=self.open_interest,
                 low_price=self.low_price,
                 close_price=self.close_price,
                 gateway_name="DB",
@@ -152,45 +160,58 @@ def init_models(db: Database, driver: Driver):
         Index is defined unique with (datetime, symbol)
         数据库里的tick数据结构
         """
-
+        # id
         id = AutoField()
-
+        # 交易对
         symbol: str = CharField()
+        # 交易所
         exchange: str = CharField()
-
+        # 时间戳
         timestamp: float = DoubleField()
+        # 日期时间
         datetime: datetime = DateTimeField()
-
+        # 交易对 ？？？
         name: str = CharField()
+        # 按交易货币统计
         volume: float = FloatField()
+        # 持仓量
+        open_interest: float = FloatField()
+        # 最新成交价
         last_price: float = FloatField()
+        # 最新成交量
         last_volume: float = FloatField()
+        # 现价 高
         limit_up: float = FloatField()
+        # 现价 低
         limit_down: float = FloatField()
-
+        # 开
         open_price: float = FloatField()
+        # 高
         high_price: float = FloatField()
+        # 低
         low_price: float = FloatField()
+        # 前一个收盘价
         pre_close: float = FloatField()
 
+        # 买
         bid_price_1: float = FloatField()
         bid_price_2: float = FloatField(null=True)
         bid_price_3: float = FloatField(null=True)
         bid_price_4: float = FloatField(null=True)
         bid_price_5: float = FloatField(null=True)
-
+        # 卖
         ask_price_1: float = FloatField()
         ask_price_2: float = FloatField(null=True)
         ask_price_3: float = FloatField(null=True)
         ask_price_4: float = FloatField(null=True)
         ask_price_5: float = FloatField(null=True)
-
+        # 买 量
         bid_volume_1: float = FloatField()
         bid_volume_2: float = FloatField(null=True)
         bid_volume_3: float = FloatField(null=True)
         bid_volume_4: float = FloatField(null=True)
         bid_volume_5: float = FloatField(null=True)
-
+        # 卖 的量
         ask_volume_1: float = FloatField()
         ask_volume_2: float = FloatField(null=True)
         ask_volume_3: float = FloatField(null=True)
@@ -199,7 +220,6 @@ def init_models(db: Database, driver: Driver):
 
         class Meta:
             database = db
-
             indexes = ((("symbol", "exchange", "timestamp", "datetime"), True),)
 
         @staticmethod
@@ -212,10 +232,11 @@ def init_models(db: Database, driver: Driver):
 
             db_tick.symbol = tick.symbol
             db_tick.exchange = tick.exchange.value
-            db_tick.timestamp = tick.timestamp
+            # db_tick.timestamp = tick.timestamp
             db_tick.datetime = tick.datetime
             db_tick.name = tick.name
             db_tick.volume = tick.volume
+            db_tick.open_interest = tick.open_interest
             db_tick.last_price = tick.last_price
             db_tick.last_volume = tick.last_volume
             db_tick.limit_up = tick.limit_up
@@ -261,10 +282,11 @@ def init_models(db: Database, driver: Driver):
             tick = TickData(
                 symbol=self.symbol,
                 exchange=Exchange(self.exchange),
-                timestamp=self.timestamp,
+                # timestamp=self.timestamp,
                 datetime=self.datetime,
                 name=self.name,
                 volume=self.volume,
+                open_interest=self.open_interest,
                 last_price=self.last_price,
                 last_volume=self.last_volume,
                 limit_up=self.limit_up,
@@ -326,9 +348,13 @@ def init_models(db: Database, driver: Driver):
 
     db.connect()
     # 如何在这里指定数据库表名， 或者根据日期新建数据库，每个数据库的表一致。
+    # DbBarData._meta.table_name = "DbBarData"
+    # DbTickData._meta.table_name = "DbTickData"
 
-    # DbBarData._meta.table_name = "ewrwrertewt"
-    # DbTickData._meta.table_name = "tickdsfdghdhgj"
+    # DbBarData._meta.table_name = "DbBarData" + str(datetime.date.today()) + \
+    #                              str(time.strftime('%H', time.localtime()))
+    # DbTickData._meta.table_name = "DbTickData" + str(datetime.date.today()) + \
+    #                               str(time.strftime('%H', time.localtime()))
     db.create_tables([DbBarData, DbTickData])
     return DbBarData, DbTickData
 
@@ -349,14 +375,15 @@ class SqlManager(BaseDatabaseManager):
         s = (
             self.class_bar.select()
             .where(
-                (self.class_bar.symbol == symbol) 
-                & (self.class_bar.exchange == exchange.value) 
-                & (self.class_bar.interval == interval.value) 
-                & (self.class_bar.datetime >= start) 
+                (self.class_bar.symbol == symbol)
+                & (self.class_bar.exchange == exchange.value)
+                & (self.class_bar.interval == interval.value)
+                & (self.class_bar.datetime >= start)
                 & (self.class_bar.datetime <= end)
             )
             .order_by(self.class_bar.datetime)
         )
+
         data = [db_bar.to_bar() for db_bar in s]
         return data
 

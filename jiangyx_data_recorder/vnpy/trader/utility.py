@@ -8,6 +8,9 @@ from typing import Callable
 
 import numpy as np
 import talib
+import time
+
+import datetime
 
 from .object import BarData, TickData
 from .constant import Exchange, Interval
@@ -15,6 +18,7 @@ from .constant import Exchange, Interval
 
 def extract_vt_symbol(vt_symbol: str):
     """
+    通过. 把 vt_symbol 拆分成 (symbol, exchange)
     :return: (symbol, exchange)
     """
     symbol, exchange_str = vt_symbol.split('.')
@@ -112,14 +116,119 @@ def round_to(value: float, target: float):
     return rounded
 
 
-class BarGenerator:
+class ToString:
+    """
+    打印一个对象, 继承这个类，可以方便的打印一个对象的内容
+    """
+    def getDescription(self):
+        """
+        
+        :return: 
+        """
+        #利用str的format格式化字符串
+        #利用生成器推导式去获取key和self中key对应的值的集合
+        return ",".join("{}={}".format(key, getattr(self, key)) for key in self.__dict__.keys())
+
+    def __str__(self):
+        """
+        
+        :return: 
+        """
+        return "{}->({})".format(self.__class__.__name__,self.getDescription())
+
+
+class TimeUtils(object):
+    """
+    时间处理函数
+    """
+
+    def convert_time(self, timestamp):
+        """
+        时间戳转换成日期和时间 str类型 单位 s
+        :param timestamp: 
+        :return: 
+        """
+        # 转换成localtime
+        time_local = time.localtime(timestamp)
+        # 转换成新的时间格式(2016-05-05 20:28:54)
+        dt = time.strftime("%Y-%m-%d %H:%M:%S", time_local)
+        return dt
+
+    def convert_date(self, timestamp):
+        """
+        时间戳转换成日期  单位 s
+        :param timestamp: 
+        :return: 
+        """
+        # 转换成localtime
+        time_local = time.localtime(timestamp)
+        # 转换成新的时间格式(2016-05-05 20:28:54)
+        dt = time.strftime("%Y-%m-%d", time_local)
+        return dt
+
+    def convert_datetime(self, timestamp):
+        """
+        时间戳转换成日期 datetime类型 单位 s
+        :param timestamp: 
+        :return: datetime类型 的日期和时间
+        """
+        # 转换成localtime
+        time_local = time.localtime(timestamp)
+        # str  to   datetime
+        dt_datetime = datetime.datetime(time_local.tm_year, time_local.tm_mon, time_local.tm_mday,
+                                        time_local.tm_hour, time_local.tm_min, time_local.tm_sec)
+        return dt_datetime
+
+    def get_secend(self, timestamp):
+        """
+        从时间戳（s）中获取到秒   
+        :param timestamp: 时间戳 （s）
+        :return: 返回 秒
+        """
+        # 转换成localtime
+        time_local = time.localtime(timestamp)
+        return time_local.tm_sec
+
+    def convert_date2timestamp(self, date):
+        """
+        str    把日期(2016-05-05 20:28:54) 转换成 时间戳    单位s
+        :param date: (2016-05-05 20:28:54)
+        :return: 时间戳 s
+        """
+        # 转为时间数组
+        timeArray = time.strptime(date, "%Y-%m-%d %H:%M:%S")
+        # 转为时间戳
+        timeStamp = int(time.mktime(timeArray))
+        return timeStamp
+
+    def convert_date2timeArray(self, date):
+        """
+        str    把日期(2016-05-05 20:28:54) 转换成 timeArray    
+        :param date: (2016-05-05 20:28:54)
+        :return: datatime
+        """
+        # 转为时间数组
+        timeArray = time.strptime(date, "%Y-%m-%d %H:%M:%S")
+        return timeArray
+
+    def convert_datetime2timestamp(self, datetime):
+        """
+        （datetime 类型 ）把日期 转换成 时间戳    单位s
+        :param date: (2016-05-05 20:28:54)
+        :return: 时间戳 s
+        """
+        # 转为时间戳
+        timeStamp = int(time.mktime(datetime.timetuple()))
+        return timeStamp
+
+
+class BarGenerator(ToString):
     """
     For: 
     1. generating 1 minute bar data from tick data
-    生成1min bar数据从tick数据
+    从tick 数据里生成 1分钟bar， （这里并不准确）
     2. generateing x minute bar/x hour bar data from 1 minute data
-    生成xmin bar/x 小时 bar 从1分钟数据
-
+    从1 分钟bar里生成x分钟/x小时bar
     Notice:
     1. for x minute bar, x must be able to divide 60: 2, 3, 5, 6, 10, 15, 20, 30
     2. for x hour bar, x can be any number
@@ -167,6 +276,7 @@ class BarGenerator:
             new_minute = True
 
         if new_minute:
+            # 如果是新的分钟，则生成新的bar
             self.bar = BarData(
                 symbol=tick.symbol,
                 exchange=tick.exchange,
@@ -179,9 +289,13 @@ class BarGenerator:
                 close_price=tick.last_price,
             )
         else:
+            # 高 price
             self.bar.high_price = max(self.bar.high_price, tick.last_price)
+            # 低 price
             self.bar.low_price = min(self.bar.low_price, tick.last_price)
+            # 收 price
             self.bar.close_price = tick.last_price
+            # 时间
             self.bar.datetime = tick.datetime
 
         if self.last_tick:

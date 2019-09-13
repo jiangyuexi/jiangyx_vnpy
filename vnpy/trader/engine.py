@@ -1,4 +1,10 @@
+# -*- coding: utf-8 -*-
 """
+时间:
+文件名:
+描述:
+
+@author: jiangyuexi1992@qq.com
 """
 
 import logging
@@ -27,8 +33,8 @@ from .object import (
     LogData,
     OrderRequest,
     SubscribeRequest,
-    HistoryRequest
-)
+    HistoryRequest,
+    SubscribeRequest1Min)
 from .setting import SETTINGS
 from .utility import get_folder_path
 
@@ -177,6 +183,15 @@ class MainEngine:
         if gateway:
             gateway.subscribe(req)
 
+    # def subscribe1min(self, req: SubscribeRequest1Min, gateway_name: str):
+    #     """
+    #     Subscribe 1 min bar data update of a specific gateway.
+    #     从指定的gateway 订阅1 min bar数据
+    #     """
+    #     gateway = self.get_gateway(gateway_name)
+    #     if gateway:
+    #         gateway.subscribe1min(req)
+
     def send_order(self, req: OrderRequest, gateway_name: str):
         """
         Send new order request to a specific gateway.
@@ -215,7 +230,7 @@ class MainEngine:
 
     def query_history(self, req: HistoryRequest, gateway_name: str):
         """
-        Send cancel order request to a specific gateway.
+        指定 gateway 请求历史数据
         """
         gateway = self.get_gateway(gateway_name)
         if gateway:
@@ -250,8 +265,11 @@ class BaseEngine(ABC):
         engine_name: str,
     ):
         """"""
+        # 主引擎
         self.main_engine = main_engine
+        # 数据引擎
         self.event_engine = event_engine
+        # 引擎名字
         self.engine_name = engine_name
 
     def close(self):
@@ -262,6 +280,7 @@ class BaseEngine(ABC):
 class LogEngine(BaseEngine):
     """
     Processes log event and output with logging module.
+    日志引擎， 处理日志事件并输出到日志模块
     """
 
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine):
@@ -273,7 +292,7 @@ class LogEngine(BaseEngine):
 
         self.level = SETTINGS["log.level"]
 
-        self.logger = logging.getLogger("VN Trader")
+        self.logger = logging.getLogger("jiangyxlog")
         self.logger.setLevel(self.level)
 
         self.formatter = logging.Formatter(
@@ -373,7 +392,10 @@ class OmsEngine(BaseEngine):
         self.main_engine.get_all_active_orders = self.get_all_active_orders
 
     def register_event(self):
-        """"""
+        """
+        添加事件到 事件引擎
+        :return: 
+        """
         self.event_engine.register(EVENT_TICK, self.process_tick_event)
         self.event_engine.register(EVENT_ORDER, self.process_order_event)
         self.event_engine.register(EVENT_TRADE, self.process_trade_event)
@@ -414,7 +436,11 @@ class OmsEngine(BaseEngine):
         self.accounts[account.vt_accountid] = account
 
     def process_contract_event(self, event: Event):
-        """"""
+        """
+        保存 symbol 符号
+        :param event: 
+        :return: 
+        """
         contract = event.data
         self.contracts[contract.vt_symbol] = contract
 
@@ -451,12 +477,14 @@ class OmsEngine(BaseEngine):
     def get_contract(self, vt_symbol):
         """
         Get contract data by vt_symbol.
+        通过 vt_symbol 获取 现货/合约 数据
         """
         return self.contracts.get(vt_symbol, None)
 
     def get_all_ticks(self):
         """
         Get all tick data.
+        获取所有的tick 数据
         """
         return list(self.ticks.values())
 
@@ -487,6 +515,7 @@ class OmsEngine(BaseEngine):
     def get_all_contracts(self):
         """
         Get all contract data.
+        获取所有的 symbol 数据
         """
         return list(self.contracts.values())
 
@@ -510,6 +539,7 @@ class OmsEngine(BaseEngine):
 class EmailEngine(BaseEngine):
     """
     Provides email sending function for VN Trader.
+    提供邮箱引擎
     """
 
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine):

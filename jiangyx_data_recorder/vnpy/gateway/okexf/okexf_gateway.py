@@ -1,3 +1,4 @@
+# encoding: UTF-8
 """
 Author: qqqlyx
 """
@@ -13,6 +14,7 @@ from copy import copy
 from datetime import datetime, timedelta
 from threading import Lock
 from urllib.parse import urlencode
+from gevent import sleep
 
 from requests import ConnectionError
 
@@ -39,8 +41,9 @@ from vnpy.trader.object import (
     OrderRequest,
     CancelRequest,
     SubscribeRequest,
-    HistoryRequest
-)
+    HistoryRequest,
+    SubscribeRequest1Min)
+
 REST_HOST = "https://www.okex.com"
 WEBSOCKET_HOST = "wss://real.okex.com:10442/ws/v3"
 
@@ -78,13 +81,14 @@ currencies = set()
 class OkexfGateway(BaseGateway):
     """
     VN Trader Gateway for OKEX connection.
+    OKex 期货
     """
 
     default_setting = {
         "API Key": "",
         "Secret Key": "",
         "Passphrase": "",
-        "Leverage": 10,  
+        "Leverage": 1,  
         "会话数": 3,
         "代理地址": "",
         "代理端口": "",
@@ -122,7 +126,15 @@ class OkexfGateway(BaseGateway):
 
     def subscribe(self, req: SubscribeRequest):
         """"""
+        # 等待websocket对象创建成功
+        sleep(5)
         self.ws_api.subscribe(req)
+
+    def subscribe1min(self, req: SubscribeRequest1Min):
+        """"""
+        # 等待websocket对象创建成功
+        sleep(5)
+        self.ws_api.subscribe1min(req)
 
     def send_order(self, req: OrderRequest):
         """"""
@@ -161,7 +173,7 @@ class OkexfGateway(BaseGateway):
 
 class OkexfRestApi(RestClient):
     """
-    OKEXF REST API
+    OKEXF REST API  期货
     """
 
     def __init__(self, gateway: BaseGateway):
@@ -608,10 +620,11 @@ class OkexfWebsocketApi(WebsocketClient):
 
         self.trade_count = 10000
         self.connect_time = 0
-        # 注册回调函数
+
         self.callbacks = {}
+        # tick 数据字典
         self.ticks = {}
-        # 1min k 线数据
+        # bar 数据字典
         self.bars = {}
 
     def connect(
@@ -630,6 +643,7 @@ class OkexfWebsocketApi(WebsocketClient):
         self.connect_time = int(datetime.now().strftime("%y%m%d%H%M%S"))
 
         self.init(WEBSOCKET_HOST, proxy_host, proxy_port)
+        # self.start()
 
     def unpack_data(self, data):
         """"""
@@ -638,6 +652,7 @@ class OkexfWebsocketApi(WebsocketClient):
     def subscribe(self, req: SubscribeRequest):
         """
         Subscribe to tick data upate.
+        订阅tick数据来更新
         """
         tick = TickData(
             symbol=req.symbol,
@@ -647,29 +662,39 @@ class OkexfWebsocketApi(WebsocketClient):
             datetime=datetime.now(),
             gateway_name=self.gateway_name,
         )
-
-        bar = BarData(
-            symbol=req.symbol,
-            exchange=req.exchange,
-            datetime=0.0,
-            interval=Interval.MINUTE,
-            gateway_name=self.gateway_name
-        )
-
         self.ticks[req.symbol] = tick
-        self.bars[req.symbol] = bar
         # 订阅tick数据和市场深度
         channel_ticker = f"futures/ticker:{req.symbol}"
         channel_depth = f"futures/depth5:{req.symbol}"
-        # 订阅 1min k线
-        channel_1m_candle = f"futures/candle60s:{req.symbol}"
         self.callbacks[channel_ticker] = self.on_ticker
         self.callbacks[channel_depth] = self.on_depth
-        # self.callbacks[channel_1m_candle] = self.on_1m_candle
-
         req = {
             "op": "subscribe",
             "args": [channel_ticker, channel_depth]
+        }
+        self.send_packet(req)
+
+    def subscribe1min(self, req: SubscribeRequest1Min):
+        """
+        Subscribe to bar data upate.
+        订阅1 分钟 bar数据来更新
+        """
+        min1bar = BarData(
+            symbol=req.symbol,
+            exchange=req.exchange,
+            datetime=datetime.now(),
+            interval=Interval.MINUTE,
+            gateway_name=self.gateway_name,
+        )
+
+        self.bars[req.symbol] = min1bar
+        # 现货 1 分钟 bar
+        channel_1min_bar = f"futures/candle60s:{req.symbol}"
+        self.callbacks[channel_1min_bar] = self.on_1min_bar
+        # websocket 订阅
+        req = {
+            "op": "subscribe",
+            "args": [channel_1min_bar]
         }
         self.send_packet(req)
 
@@ -736,7 +761,7 @@ class OkexfWebsocketApi(WebsocketClient):
         """
         self.callbacks["futures/ticker"] = self.on_ticker
         self.callbacks["futures/depth5"] = self.on_depth
-        # self.callbacks["futures/candle60s"] = self.on_1m_candle
+        self.callbacks["futures/candle60s"] = self.on_1min_bar
         self.callbacks["futures/account"] = self.on_account
         self.callbacks["futures/order"] = self.on_order
         self.callbacks["futures/position"] = self.on_position
@@ -779,6 +804,7 @@ class OkexfWebsocketApi(WebsocketClient):
         self.send_packet(req)
 
         # Subscribe to BTC/USDT trade for keep connection alive
+        # 订阅来保持 websocket持续连接
         req = {
             "op": "subscribe",
             "args": ["spot/trade:EOS-USDT"]
@@ -801,16 +827,20 @@ class OkexfWebsocketApi(WebsocketClient):
         tick = self.ticks.get(symbol, None)
         if not tick:
             return
-
+        # 最新成交价
         tick.last_price = float(d["last"])
+        # 	24小时开盘价
+        tick.open_price = float(d["open_24h"])
+        # 24小时最高价
         tick.high_price = float(d["high_24h"])
+        # 24小时最低价
         tick.low_price = float(d["low_24h"])
+        # 24小时成交量，按交易货币统计
         tick.volume = float(d["volume_24h"])
+        # 年月日时分秒
         tick.datetime = utc_to_local(d["timestamp"])
-
         # 时间戳
         tick.timestamp = datetime.timestamp(tick.datetime)
-
         self.gateway.on_tick(copy(tick))
 
     def on_depth(self, d):
@@ -838,12 +868,13 @@ class OkexfWebsocketApi(WebsocketClient):
             tick.__setattr__("ask_volume_%s" % (n + 1), volume)
 
         tick.datetime = utc_to_local(d["timestamp"])
+        # 时间戳
+        tick.timestamp = datetime.timestamp(tick.datetime)
         self.gateway.on_tick(copy(tick))
 
-    def on_1m_candle(self, d):
+    def on_1min_bar(self, d):
         """
-        1min   蜡烛图
-         
+        
         :param d: 
         :return: 
         """
@@ -851,16 +882,19 @@ class OkexfWebsocketApi(WebsocketClient):
         bar = self.bars.get(symbol, None)
         if not bar:
             return
-
+        # 日期时间
         bar.datetime = utc_to_local(d["candle"][0])
-        # 按币折算的交易量
-
-        bar.open_price = d["candle"][1]
-        bar.high_price = d["candle"][2]
-        bar.low_price = d["candle"][3]
-        bar.close_price = d["candle"][4]
-        bar.volume = d["candle"][6]
-        # self.gateway.on_tick(copy(bar))
+        # 开盘价
+        bar.open_price = float(d["candle"][1])
+        # 最高价
+        bar.high_price = float(d["candle"][2])
+        # 最低价
+        bar.low_price = float(d["candle"][3])
+        # 收盘价
+        bar.close_price = float(d["candle"][4])
+        # 成交量
+        bar.volume = float(d["candle"][6])
+        self.gateway.on_bar(copy(bar))
 
     def on_order(self, d):
         """"""

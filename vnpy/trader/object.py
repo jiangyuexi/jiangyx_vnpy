@@ -36,11 +36,12 @@ class TickData(BaseData):
 
     symbol: str
     exchange: Exchange
-    timestamp: float
+    # timestamp: float
     datetime: datetime
 
     name: str = ""
     volume: float = 0
+    open_interest: float = 0
     last_price: float = 0
     last_volume: float = 0
     limit_up: float = 0
@@ -93,6 +94,8 @@ class BarData(BaseData):
 
     interval: Interval = None
     volume: float = 0
+    # 持仓量
+    open_interest: float = 0
     open_price: float = 0
     high_price: float = 0
     low_price: float = 0
@@ -110,17 +113,24 @@ class OrderData(BaseData):
     of a specific order.
     订单数据结构
     """
-
+    # 交易对
     symbol: str
+    # 交易所
     exchange: Exchange
+    # 订单号
     orderid: str
-
+    # 交易类型  限价 市价
     type: OrderType = OrderType.LIMIT
+    # 方向
     direction: Direction = ""
     offset: Offset = Offset.NONE
+    # 价格
     price: float = 0
+    # 挂单总数量
     volume: float = 0
+    # 已成交数量
     traded: float = 0
+    # 状态
     status: Status = Status.SUBMITTING
     time: str = ""
 
@@ -201,10 +211,11 @@ class AccountData(BaseData):
     Account data contains information about balance, frozen and
     available.
     """
-
+    # 商品名
     accountid: str
-
+    # 余额
     balance: float = 0
+    # 冻结资金
     frozen: float = 0
 
     def __post_init__(self):
@@ -231,13 +242,19 @@ class LogData(BaseData):
 class ContractData(BaseData):
     """
     Contract data contains basic information about each contract traded.
+    Contract数据，包含每一份交易Contract的基本信息。
     """
-
+    # 交易对符号
     symbol: str
+    # 交易所名字
     exchange: Exchange
+    # 合约中文名
     name: str
+    # 合约类型
     product: Product
+    # 合约大小
     size: int
+    # 合约最小价格TICK
     pricetick: float
 
     min_volume: float = 1           # minimum trading volume of the contract
@@ -259,7 +276,22 @@ class ContractData(BaseData):
 class SubscribeRequest:
     """
     Request sending to specific gateway for subscribing tick data update.
-    接收tick数据
+    请求tick数据
+    """
+    # 交易对
+    symbol: str
+    # 交易所
+    exchange: Exchange
+
+    def __post_init__(self):
+        """"""
+        self.vt_symbol = f"{self.symbol}.{self.exchange.value}"
+
+
+@dataclass
+class SubscribeRequest1Min:
+    """
+    请求1 min bar数据
     """
 
     symbol: str
@@ -275,13 +307,19 @@ class OrderRequest:
     """
     Request sending to specific gateway for creating a new order.
     """
-
+    # 交易对
     symbol: str
+    # 交易所
     exchange: Exchange
+    # 方向
     direction: Direction
+    # 下单类型
     type: OrderType
+    # 数量
     volume: float
+    # 价格
     price: float = 0
+
     offset: Offset = Offset.NONE
 
     def __post_init__(self):
@@ -311,9 +349,11 @@ class CancelRequest:
     """
     Request sending to specific gateway for canceling an existing order.
     """
-
+    # 订单号
     orderid: str
+    # 交易对
     symbol: str
+    # 交易所
     exchange: Exchange
 
     def __post_init__(self):
@@ -325,12 +365,17 @@ class CancelRequest:
 class HistoryRequest:
     """
     Request sending to specific gateway for querying history data.
+    向指定的gateway，请求历史数据
     """
-
+    # 交易对
     symbol: str
+    # 交易所
     exchange: Exchange
+    # 开始时间
     start: datetime
+    # 结束时间
     end: datetime = None
+    # 时间间隔
     interval: Interval = None
 
     def __post_init__(self):

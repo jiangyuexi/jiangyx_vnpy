@@ -121,11 +121,11 @@ class PositionHolding:
         if position.direction == Direction.LONG:
             self.long_pos = position.volume
             self.long_yd = position.yd_volume
-            self.long_td = self.long_pos - self.long_yd
+            self.long_td = float(self.long_pos) - float(self.long_yd)
         else:
             self.short_pos = position.volume
             self.short_yd = position.yd_volume
-            self.short_td = self.short_pos - self.short_yd
+            self.short_td = float(self.short_pos) - float(self.short_yd)
 
     def update_order(self, order: OrderData):
         """"""

@@ -7,7 +7,7 @@ from datetime import datetime
 if __name__ == "__main__":
     engine = BacktestingEngine()
     engine.set_parameters(
-        vt_symbol="IF88.CFFEX",
+        vt_symbol="BTC-USDT.OKEX",
         interval="1m",
         start=datetime(2019, 1, 1),
         end=datetime(2019, 4, 30),

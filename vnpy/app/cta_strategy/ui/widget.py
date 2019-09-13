@@ -165,6 +165,7 @@ class StrategyManager(QtWidgets.QFrame):
         self.cta_engine = cta_engine
 
         self.strategy_name = data["strategy_name"]
+        print(data)
         self._data = data
 
         self.init_ui()

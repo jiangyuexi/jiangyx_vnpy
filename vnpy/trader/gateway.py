@@ -1,5 +1,10 @@
+# -*- coding: utf-8 -*-
 """
+时间:
+文件名:
+描述:
 
+@author: jiangyuexi1992@qq.com
 """
 
 from abc import ABC, abstractmethod
@@ -14,8 +19,7 @@ from .event import (
     EVENT_POSITION,
     EVENT_ACCOUNT,
     EVENT_CONTRACT,
-    EVENT_LOG,
-)
+    EVENT_LOG)
 from .object import (
     TickData,
     OrderData,
@@ -27,8 +31,8 @@ from .object import (
     OrderRequest,
     CancelRequest,
     SubscribeRequest,
-    HistoryRequest
-)
+    HistoryRequest,
+    BarData, SubscribeRequest1Min)
 
 
 class BaseGateway(ABC):
@@ -84,6 +88,7 @@ class BaseGateway(ABC):
     def on_event(self, type: str, data: Any = None):
         """
         General event push.
+        生成时间，然后放进队列
         """
         event = Event(type, data)
         self.event_engine.put(event)
@@ -95,6 +100,16 @@ class BaseGateway(ABC):
         """
         self.on_event(EVENT_TICK, tick)
         self.on_event(EVENT_TICK + tick.vt_symbol, tick)
+
+    def on_bar(self, bar: BarData):
+        """
+        bar event push.
+        bar event of a specific vt_symbol is also pushed.
+        
+        jiangyuexi add
+        """
+        self.on_event(EVENT_BAR, bar)
+        self.on_event(EVENT_BAR + bar.vt_symbol, bar)
 
     def on_trade(self, trade: TradeData):
         """
@@ -138,6 +153,7 @@ class BaseGateway(ABC):
         """
         Contract event push.
         """
+        # websocket 请求 tick 和bar数据事件
         self.on_event(EVENT_CONTRACT, contract)
 
     def write_log(self, msg: str):
@@ -182,6 +198,13 @@ class BaseGateway(ABC):
         Subscribe tick data update.
         """
         pass
+
+    # @abstractmethod
+    # def subscribe1min(self, req: SubscribeRequest1Min):
+    #     """
+    #     Subscribe 1min bar data update.
+    #     """
+    #     pass
 
     @abstractmethod
     def send_order(self, req: OrderRequest) -> str:
@@ -250,6 +273,7 @@ class BaseGateway(ABC):
     def query_history(self, req: HistoryRequest):
         """
         Query bar history data.
+        请求 bar 历史数据
         """
         pass
 
@@ -263,6 +287,7 @@ class BaseGateway(ABC):
 class LocalOrderManager:
     """
     Management tool to support use local order id for trading.
+    管理工具，支持使用本地订单id进行交易。
     """
 
     def __init__(self, gateway: BaseGateway):

@@ -21,6 +21,7 @@ class RequestStatus(Enum):
 class Request(object):
     """
     Request object for status check.
+    # 请求对象进行状态检查。
     """
 
     def __init__(
@@ -38,6 +39,7 @@ class Request(object):
         """"""
         self.method = method
         self.path = path
+        # 用于处理数据的回调函数
         self.callback = callback
         self.params = params
         self.data = data
@@ -88,10 +90,11 @@ class RestClient(object):
     def __init__(self):
         """
         """
+        #  url 共同的字符串
         self.url_base = ''  # type: str
         # 本类线程开关
         self._active = False
-        # 队列
+        # rest api 队列
         self._queue = Queue()
         self._pool = None  # type: Pool
 
@@ -109,7 +112,10 @@ class RestClient(object):
             self.proxies = {"http": proxy, "https": proxy}
 
     def _create_session(self):
-        """"""
+        """
+        得到session
+        :return: 
+        """
         return requests.session()
 
     def start(self, n: int = 3):
@@ -151,6 +157,7 @@ class RestClient(object):
     ):
         """
         Add a new request.
+        添加一个新的请求
         :param method: GET, POST, PUT, DELETE, QUERY
         :param path: 
         :param callback: callback function if 2xx status, type: (dict, Request)
@@ -173,10 +180,15 @@ class RestClient(object):
             on_error,
             extra,
         )
+        # rest api 队列 里面放入 请求
         self._queue.put(request)
         return request
 
     def _run(self):
+        """
+        从 rest api 队列里 取出数据，进行处理
+        :return: 
+        """
         try:
             session = self._create_session()
             while self._active:
@@ -244,6 +256,7 @@ class RestClient(object):
     ):
         """
         Sending request to server and get result.
+        发送 请求到 服务器， 并且拿到返回结果
         """
         # noinspection PyBroadException
         try:
@@ -263,7 +276,9 @@ class RestClient(object):
 
             status_code = response.status_code
             if status_code // 100 == 2:  # 2xx都算成功，尽管交易所都用200
+                # json 格式的结果
                 jsonBody = response.json()
+                # 调用处理数据的回调函数
                 request.callback(jsonBody, request)
                 request.status = RequestStatus.success
             else:

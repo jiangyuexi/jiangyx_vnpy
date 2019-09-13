@@ -12,6 +12,7 @@ from queue import Queue
 from copy import copy
 
 from vnpy.event import Event, EventEngine
+from vnpy.gateway.okex import OkexGateway
 from vnpy.trader.engine import BaseEngine, MainEngine
 from vnpy.trader.object import (
     OrderRequest,
@@ -39,7 +40,7 @@ from vnpy.trader.constant import (
 from vnpy.trader.utility import load_json, save_json, extract_vt_symbol
 # 初始化数据库
 from vnpy.trader.database import database_manager
-from vnpy.trader.rqdata import rqdata_client
+
 
 from .base import (
     APP_NAME,
@@ -69,7 +70,7 @@ class CtaEngine(BaseEngine):
     """"""
 
     engine_type = EngineType.LIVE  # live trading engine
-
+    # cta 策略配置文件
     setting_filename = "cta_strategy_setting.json"
     data_filename = "cta_strategy_data.json"
 
@@ -80,8 +81,9 @@ class CtaEngine(BaseEngine):
 
         self.strategy_setting = {}  # strategy_name: dict
         self.strategy_data = {}     # strategy_name: dict
-
+        # 策略类 名字
         self.classes = {}           # class_name: stategy_class
+        # 策略实例 名字
         self.strategies = {}        # strategy_name: strategy
 
         self.symbol_strategy_map = defaultdict(
@@ -95,9 +97,10 @@ class CtaEngine(BaseEngine):
 
         self.init_thread = None
         self.init_queue = Queue()
-
-        self.rq_client = None
-        self.rq_symbols = set()
+        # 交易客户端
+        self.client = None
+        # 交易对 符号
+        self.symbols = set()
 
         self.vt_tradeids = set()    # for filtering duplicate trade
 
@@ -105,8 +108,9 @@ class CtaEngine(BaseEngine):
 
     def init_engine(self):
         """
+        初始化引擎
         """
-        self.init_rqdata()
+        self.init_data()
         self.load_strategy_class()
         self.load_strategy_setting()
         self.load_strategy_data()
@@ -124,13 +128,14 @@ class CtaEngine(BaseEngine):
         self.event_engine.register(EVENT_TRADE, self.process_trade_event)
         self.event_engine.register(EVENT_POSITION, self.process_position_event)
 
-    def init_rqdata(self):
+    def init_data(self):
         """
-        Init RQData client.
+        Init Data client.
         """
-        result = rqdata_client.init()
-        if result:
-            self.write_log("RQData数据接口初始化成功")
+
+        # result = rqdata_client.init()
+        # if result:
+        #     self.write_log("RQData数据接口初始化成功")
 
     def query_bar_from_rq(
         self, symbol: str, exchange: Exchange, interval: Interval, start: datetime, end: datetime
@@ -138,15 +143,16 @@ class CtaEngine(BaseEngine):
         """
         Query bar data from RQData.
         """
-        req = HistoryRequest(
-            symbol=symbol,
-            exchange=exchange,
-            interval=interval,
-            start=start,
-            end=end
-        )
-        data = rqdata_client.query_history(req)
-        return data
+        # req = HistoryRequest(
+        #     symbol=symbol,
+        #     exchange=exchange,
+        #     interval=interval,
+        #     start=start,
+        #     end=end
+        # )
+        #
+        # data = rqdata_client.query_history(req)
+        # return data
 
     def process_tick_event(self, event: Event):
         """"""
@@ -231,10 +237,10 @@ class CtaEngine(BaseEngine):
                 continue
 
             long_triggered = (
-                stop_order.direction == Direction.LONG and tick.last_price >= stop_order.price
+                stop_order.direction == Direction.LONG and tick.last_price >= float(stop_order.price)
             )
             short_triggered = (
-                stop_order.direction == Direction.SHORT and tick.last_price <= stop_order.price
+                stop_order.direction == Direction.SHORT and tick.last_price <= float(stop_order.price)
             )
 
             if long_triggered or short_triggered:
@@ -567,12 +573,14 @@ class CtaEngine(BaseEngine):
     ):
         """
         Add a new strategy.
+        添加新的策略
         """
         if strategy_name in self.strategies:
             self.write_log(f"创建策略失败，存在重名{strategy_name}")
             return
-
+        # 获取 策略类名
         strategy_class = self.classes[class_name]
+        # 蒋越希修改 支持多个交易品种
 
         strategy = strategy_class(self, strategy_name, vt_symbol, setting)
         self.strategies[strategy_name] = strategy
@@ -815,6 +823,7 @@ class CtaEngine(BaseEngine):
     def load_strategy_setting(self):
         """
         Load setting file.
+        加载配置文件
         """
         self.strategy_setting = load_json(self.setting_filename)
 
@@ -829,6 +838,7 @@ class CtaEngine(BaseEngine):
     def update_strategy_setting(self, strategy_name: str, setting: dict):
         """
         Update setting file.
+        更新配置文件
         """
         strategy = self.strategies[strategy_name]
 
@@ -852,6 +862,7 @@ class CtaEngine(BaseEngine):
     def put_stop_order_event(self, stop_order: StopOrder):
         """
         Put an event to update stop order status.
+        放入一个 止损单事件到队列
         """
         event = Event(EVENT_CTA_STOPORDER, stop_order)
         self.event_engine.put(event)
@@ -859,6 +870,7 @@ class CtaEngine(BaseEngine):
     def put_strategy_event(self, strategy: CtaTemplate):
         """
         Put an event to update strategy status.
+        放入一个 策略状态事件到队列
         """
         data = strategy.get_data()
         event = Event(EVENT_CTA_STRATEGY, data)
@@ -867,6 +879,7 @@ class CtaEngine(BaseEngine):
     def write_log(self, msg: str, strategy: CtaTemplate = None):
         """
         Create cta engine log event.
+        产生CTA引擎日志事件
         """
         if strategy:
             msg = f"{strategy.strategy_name}: {msg}"
@@ -878,6 +891,7 @@ class CtaEngine(BaseEngine):
     def send_email(self, msg: str, strategy: CtaTemplate = None):
         """
         Send email to default receiver.
+        发送email 
         """
         if strategy:
             subject = f"{strategy.strategy_name}"

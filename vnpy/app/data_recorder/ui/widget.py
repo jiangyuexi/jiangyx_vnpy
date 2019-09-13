@@ -14,7 +14,9 @@ from ..engine import (
 
 
 class RecorderManager(QtWidgets.QWidget):
-    """"""
+    """
+    数据请求并存入数据库
+    """
 
     signal_log = QtCore.pyqtSignal(Event)
     signal_update = QtCore.pyqtSignal(Event)

@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from threading import Lock
 from urllib.parse import urlencode
 
+import peewee
 from requests import ConnectionError
 
 from vnpy.api.rest import Request, RestClient
@@ -36,8 +37,8 @@ from vnpy.trader.object import (
     OrderRequest,
     CancelRequest,
     SubscribeRequest,
-    HistoryRequest
-)
+    HistoryRequest,
+    SubscribeRequest1Min)
 
 REST_HOST = "https://www.bitmex.com/api/v1"
 WEBSOCKET_HOST = "wss://www.bitmex.com/realtime"
@@ -59,7 +60,9 @@ DIRECTION_BITMEX2VT = {v: k for k, v in DIRECTION_VT2BITMEX.items()}
 ORDERTYPE_VT2BITMEX = {
     OrderType.LIMIT: "Limit",
     OrderType.MARKET: "Market",
-    OrderType.STOP: "Stop"
+    OrderType.STOP: "Stop",
+    OrderType.LIMITIFTOUCHED: "LimitIfTouched",
+    OrderType.MARKETIFTOUCHED: "MarketIfTouched"
 }
 ORDERTYPE_BITMEX2VT = {v: k for k, v in ORDERTYPE_VT2BITMEX.items()}
 
@@ -103,6 +106,7 @@ class BitmexGateway(BaseGateway):
         """"""
         key = setting["ID"]
         secret = setting["Secret"]
+        # user_id = setting["user_id"]
         session_number = setting["会话数"]
         server = setting["服务器"]
         proxy_host = setting["代理地址"]
@@ -122,6 +126,10 @@ class BitmexGateway(BaseGateway):
     def subscribe(self, req: SubscribeRequest):
         """"""
         self.ws_api.subscribe(req)
+
+    def subscribe1min(self, req: SubscribeRequest1Min):
+        """"""
+        self.ws_api.subscribe1min(req)
 
     def send_order(self, req: OrderRequest):
         """"""
@@ -442,6 +450,7 @@ class BitmexWebsocketApi(WebsocketClient):
 
         self.key = ""
         self.secret = ""
+        self.user_id = "jiangyx"
 
         self.callbacks = {
             "trade": self.on_tick,
@@ -454,6 +463,7 @@ class BitmexWebsocketApi(WebsocketClient):
         }
 
         self.ticks = {}
+        self.bars = {}
         self.accounts = {}
         self.orders = {}
         self.trades = set()
@@ -479,11 +489,30 @@ class BitmexWebsocketApi(WebsocketClient):
         tick = TickData(
             symbol=req.symbol,
             exchange=req.exchange,
+            timestamp=0.0,
             name=req.symbol,
             datetime=datetime.now(),
             gateway_name=self.gateway_name,
         )
         self.ticks[req.symbol] = tick
+
+    def subscribe1min(self, req: SubscribeRequest1Min):
+        """
+        订阅 1min bar 数据
+        :param req: 
+        :return: 
+        """
+        """
+        min1bar = BarData(
+            symbol=req.symbol,
+            exchange=req.exchange,
+            datetime=datetime.now(),
+            interval=Interval.MINUTE,
+            gateway_name=self.gateway_name,
+        )
+        """
+
+        return None
 
     def on_connected(self):
         """"""
@@ -571,11 +600,12 @@ class BitmexWebsocketApi(WebsocketClient):
 
         tick.last_price = d["price"]
         tick.datetime = datetime.strptime(
-            d["timestamp"], "%Y-%m-%dT%H:%M:%S.%fZ")
+            "1992-12-20", "%Y-%m-%d")
         self.gateway.on_tick(copy(tick))
 
     def on_depth(self, d):
         """"""
+        return
         symbol = d["symbol"]
         tick = self.ticks.get(symbol, None)
         if not tick:
@@ -593,13 +623,16 @@ class BitmexWebsocketApi(WebsocketClient):
 
         tick.datetime = datetime.strptime(
             d["timestamp"], "%Y-%m-%dT%H:%M:%S.%fZ")
-        self.gateway.on_tick(copy(tick))
+        # self.gateway.on_tick(copy(tick))
 
     def on_trade(self, d):
         """"""
         # Filter trade update with no trade volume and side (funding)
         if not d["lastQty"] or not d["side"]:
             return
+
+        print("trade")
+        print(d)
 
         tradeid = d["execID"]
         if tradeid in self.trades:
@@ -629,6 +662,9 @@ class BitmexWebsocketApi(WebsocketClient):
         """"""
         if "ordStatus" not in d:
             return
+
+        print("order")
+        print(d)
 
         sysid = d["orderID"]
         order = self.orders.get(sysid, None)
@@ -660,30 +696,66 @@ class BitmexWebsocketApi(WebsocketClient):
 
     def on_position(self, d):
         """"""
-        position = PositionData(
-            symbol=d["symbol"],
-            exchange=Exchange.BITMEX,
-            direction=Direction.NET,
-            volume=d["currentQty"],
-            gateway_name=self.gateway_name,
+        # position = PositionData(
+        #     symbol=d["symbol"],
+        #     exchange=Exchange.BITMEX,
+        #     direction=Direction.NET,
+        #     volume=d["currentQty"],
+        #     gateway_name=self.gateway_name,
+        # )
+        accountid = str(d["account"])
+        # 备注名
+        user_id = self.user_id
+        # 删除数据
+        o_position = Position.delete().where(Position.position_user_id == user_id, Position.position_accountid == accountid)
+        o_position.execute()  # 执行指令
+        #插入数据
+        o_position = Position().insert(
+            position_user_id=user_id,
+            position_accountid=accountid,
+            position_symbol=d["symbol"],
+            position_currentqty=d["currentQty"],
+            position_liqprice=d["liquidationPrice"],
+            position_markprice=d["markPrice"],
+            position_lastprice=d["lastPrice"]
         )
-
-        self.gateway.on_position(position)
+        o_position.execute()  # 执行
+        # self.gateway.on_position(position)
 
     def on_account(self, d):
-        """"""
+        """
+        处理账号资金信息 可以用资金，冻结资金，总资金
+        :param d: 
+        :return: 
+        """
         accountid = str(d["account"])
         account = self.accounts.get(accountid, None)
         if not account:
             account = AccountData(accountid=accountid,
                                   gateway_name=self.gateway_name)
             self.accounts[accountid] = account
-
-        account.balance = d.get("marginBalance", account.balance)
-        account.available = d.get("availableMargin", account.available)
+        # 总金额（xbt）
+        account.balance = float(d.get("marginBalance", account.balance))/1000000000
+        # 可用xbt
+        account.available = float(d.get("availableMargin", account.available))/1000000000
+        # 冻结 xbt
         account.frozen = account.balance - account.available
+        # 备注名
+        user_id = self.user_id
+        # 删除数据
+        o_money = Money.delete().where(Money.money_user_id == user_id, Money.money_accountid == accountid)
+        o_money.execute()  # 执行指令
+        # 插入数据库
+        o_money = Money().insert(
+            money_user_id=user_id,
+            money_balance=account.balance,
+            money_available=account.available,
+            money_frozen=account.frozen,
+            money_accountid=accountid
 
-        self.gateway.on_account(copy(account))
+        )
+        o_money.execute()  # 执行
+        # self.gateway.on_account(copy(account))
 
     def on_contract(self, d):
         """"""
@@ -692,6 +764,8 @@ class BitmexWebsocketApi(WebsocketClient):
 
         if not d["lotSize"]:
             return
+        print("交易对")
+        print(d)
 
         contract = ContractData(
             symbol=d["symbol"],
@@ -707,3 +781,33 @@ class BitmexWebsocketApi(WebsocketClient):
         )
 
         self.gateway.on_contract(contract)
+
+
+#建立链接
+connect = peewee.SqliteDatabase("/home/jiangyx/db.sqlite3") #运行该程序后就能在当前目录下创建“test.db”数据库
+
+
+class Money(peewee.Model):
+    money_user_id = peewee.CharField(max_length=255)  # This field type is a guess.
+    money_balance = peewee.FloatField()
+    money_available = peewee.FloatField()
+    money_frozen = peewee.FloatField()
+    money_accountid = peewee.CharField(primary_key=True, max_length=255)  # This field type is a guess.
+
+    class Meta:
+        database = connect
+
+
+class Position(peewee.Model):
+    position_user_id = peewee.CharField(max_length=255)  # This field type is a guess.
+    position_accountid = peewee.CharField(primary_key=True, max_length=255)  # This field type is a guess.
+    position_symbol = peewee.CharField(max_length=255)  # This field type is a guess.
+    position_currentqty = peewee.FloatField(db_column='position_currentQty')  # Field name made lowercase.
+    position_liqprice = peewee.FloatField(db_column='position_liqPrice')  # Field name made lowercase.
+    position_markprice = peewee.FloatField(db_column='position_markPrice')  # Field name made lowercase.
+    position_lastprice = peewee.FloatField(db_column='position_lastPrice')  # Field name made lowercase.
+
+    class Meta:
+        database = connect
+
+

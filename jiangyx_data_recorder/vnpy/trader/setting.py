@@ -30,10 +30,10 @@ SETTINGS = {
     # mysql 数据库
     "database.driver": "mysql",  # see database.Driver
     "database.database": "myvnpycore",  # for sqlite, use this as filepath
-    "database.host": "47.107.61.193",
+    "database.host": "127.0.0.1",
     "database.port": 3306,
     "database.user": "root",
-    "database.password": "root",
+    "database.password": "123456",
     "database.authentication_source": "admin",  # for mongodb
 }
 

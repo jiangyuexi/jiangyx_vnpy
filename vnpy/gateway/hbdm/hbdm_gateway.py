@@ -9,6 +9,8 @@ import json
 import zlib
 import hashlib
 import hmac
+from time import sleep, localtime, strftime
+
 from copy import copy
 from datetime import datetime
 from threading import Lock
@@ -38,10 +40,11 @@ from vnpy.trader.object import (
     OrderRequest,
     CancelRequest,
     SubscribeRequest,
+    SubscribeRequest1Min,
     HistoryRequest
 )
 from vnpy.trader.event import EVENT_TIMER
-
+from vnpy.trader.utility import TimeUtils
 
 REST_HOST = "https://api.hbdm.com"
 WEBSOCKET_DATA_HOST = "wss://www.hbdm.com/ws"               # Market Data
@@ -136,7 +139,18 @@ class HbdmGateway(BaseGateway):
 
     def subscribe(self, req: SubscribeRequest):
         """"""
+        sleep(5)
         self.market_ws_api.subscribe(req)
+
+    def subscribe1min(self, req: SubscribeRequest1Min):
+        """
+        订阅 1 min k 线
+        :param req: 
+        :return: 
+        """
+        sleep(5)
+        # print("订阅 1 min k 线")
+        self.market_ws_api.subscribe1min(req)
 
     def send_order(self, req: OrderRequest):
         """"""
@@ -169,7 +183,11 @@ class HbdmGateway(BaseGateway):
         self.market_ws_api.stop()
 
     def process_timer_event(self, event: Event):
-        """"""
+        """
+        定时器回调函数
+        :param event: 
+        :return: 
+        """        
         self.count += 1
         if self.count < 3:
             return
@@ -178,7 +196,10 @@ class HbdmGateway(BaseGateway):
         self.query_position()
 
     def init_query(self):
-        """"""
+        """
+        注册定时器回调函数
+        :return: 
+        """
         self.count = 0
         self.event_engine.register(EVENT_TIMER, self.process_timer_event)
 
@@ -821,7 +842,11 @@ class HbdmWebsocketApiBase(WebsocketClient):
         return json.loads(zlib.decompress(data, 31)) 
 
     def on_packet(self, packet):
-        """"""
+        """
+        回调函数，从服务器接收数据
+        :param packet: 
+        :return: 
+        """
         if "ping" in packet:
             req = {"pong": packet["ping"]}
             self.send_packet(req)
@@ -947,8 +972,12 @@ class HbdmDataWebsocketApi(HbdmWebsocketApiBase):
     def __init__(self, gateway):
         """"""
         super().__init__(gateway)
-
+        # tick数据
+        self.req_id = 0
         self.ticks = {}
+        # bar 数据
+        self.bar_id = 0
+        self.bars = {}
 
     def connect(self, key: str, secret: str, proxy_host: str, proxy_port: int):
         """"""
@@ -959,7 +988,11 @@ class HbdmDataWebsocketApi(HbdmWebsocketApiBase):
         self.gateway.write_log("行情Websocket API连接成功")
         
     def subscribe(self, req: SubscribeRequest):
-        """"""
+        """
+        订阅 tick数据
+        :param req: 
+        :return: 
+        """
         contract_type = symbol_type_map.get(req.symbol, "")
         if not contract_type:
             return
@@ -997,21 +1030,71 @@ class HbdmDataWebsocketApi(HbdmWebsocketApiBase):
         }
         self.send_packet(req)
 
+    def subscribe1min(self, req: SubscribeRequest1Min):
+        """
+        订阅 1 min bar数据
+        :param req: 
+        :return: 
+        """
+        contract_type = symbol_type_map.get(req.symbol, "")
+        if not contract_type:
+            return
+
+        buf = [i for i in req.symbol if not i.isdigit()]
+        # 拼接出 交易对符号
+        symbol = "".join(buf)
+        # websocket 合约类型   当周  次周 季度
+        ws_contract_type = CONTRACT_TYPE_MAP[contract_type]
+        # 拼接出 websocket 交易对符号
+        ws_symbol = f"{symbol}_{ws_contract_type}"
+
+        # Create bar data buffer
+        min1bar = BarData(
+            symbol=req.symbol,
+            exchange=req.exchange,
+            datetime=datetime.now(),
+            interval=Interval.MINUTE,
+            gateway_name=self.gateway_name,
+        )
+        self.bars[ws_symbol] = min1bar
+        # 订阅 1 min  bar
+        # Subscribe to market depth update
+        self.req_id += 1
+        # market.$symbol$.kline.$period$
+        req = {
+            "sub": f"market.{ws_symbol}.kline.1min",
+            "id": str(self.req_id)
+        }
+        self.send_packet(req)
+
     def on_data(self, packet):  # type: (dict)->None
-        """"""
+        """
+        把 websocket 的数据获取下来进行解析
+        :param packet: 
+        :return: 
+        """
         channel = packet.get("ch", None)
         if channel:
             if "depth.step" in channel:
+                # 市场深度获取并存入数据库
                 self.on_market_depth(packet)
             elif "detail" in channel:
+                # 市场细节推送
                 self.on_market_detail(packet)
-        elif "err_code" in packet:
-            code = packet["err_code"]
-            msg = packet["err_msg"]
+            elif "kline.1min" in channel:
+                # 解析获取到的 1min bar 数据
+                self.on_kline_1min(packet)
+        elif "err-code" in packet:
+            code = packet["err-code"]
+            msg = packet["err-msg"]
             self.gateway.write_log(f"错误代码：{code}, 错误信息：{msg}")
 
     def on_market_depth(self, data):
-        """行情深度推送 """
+        """
+        tick 市场深度解析并存入数据库
+        :param data: 
+        :return: 
+        """
         ws_symbol = data["ch"].split(".")[1]
         tick = self.ticks[ws_symbol]
         tick.datetime = datetime.fromtimestamp(data["ts"] / 1000)
@@ -1032,7 +1115,11 @@ class HbdmDataWebsocketApi(HbdmWebsocketApiBase):
             self.gateway.on_tick(copy(tick))
 
     def on_market_detail(self, data):
-        """市场细节推送"""
+        """
+        tick 数据 解析并存入数据库
+        :param data: 
+        :return: 
+        """
         ws_symbol = data["ch"].split(".")[1]
         tick = self.ticks[ws_symbol]
         tick.datetime = datetime.fromtimestamp(data["ts"] / 1000)
@@ -1047,6 +1134,47 @@ class HbdmDataWebsocketApi(HbdmWebsocketApiBase):
 
         if tick.bid_price_1:
             self.gateway.on_tick(copy(tick))
+
+    def on_kline_1min(self, data):
+        """
+        把获取到的 1min
+        bar 存入数据库
+        :param data: 
+        :return: 
+        """
+        symbol = data["ch"].split(".")[1]
+        # print(symbol)
+        bar = self.bars[symbol]
+        # print(bar)
+        if not bar:
+            return
+
+        tick_data = data["tick"]
+
+        # 如果 1min 快接结束了 才存入数据库
+        tu = TimeUtils()
+        secend = tu.get_secend(data["ts"] // 1000)
+        if secend < 45:
+            return
+        # print(secend)
+        # print(tick_data)
+        # 日期时间
+        # 转换成localtime
+        time_local = localtime(data["ts"] // 1000)
+        # 转换成新的时间格式(2016-05-05 20:28:54)
+        bar.datetime = strftime("%Y-%m-%d %H:%M:00", time_local)
+        # print(bar.datetime)
+        # 开盘价
+        bar.open_price = float(tick_data["open"])
+        # 最高价
+        bar.high_price = float(tick_data["high"])
+        # 最低价
+        bar.low_price = float(tick_data["low"])
+        # 收盘价
+        bar.close_price = float(tick_data["close"])
+        # 成交量
+        bar.volume = float(tick_data["vol"])
+        self.gateway.on_bar(copy(bar))
 
 
 def _split_url(url):
